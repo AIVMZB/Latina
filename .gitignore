@@ -1,4 +1,6 @@
 venv
 .idea
-runs
+src/runs
 predictions
+dataset
+images

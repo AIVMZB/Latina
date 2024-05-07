@@ -1,0 +1,9 @@
+path: ../dataset
+train: ./train
+val: ./validation
+
+nc: 1
+
+names: 
+  0: word
+  
