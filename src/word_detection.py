@@ -48,6 +48,9 @@ def inference(images_dir: str,
 
 
 if __name__ == "__main__":
+    # Uncomment the line below to train model for 5 epochs
     # train_detection_model(epochs=5)
-    inference("../images", BEST_TRAINED_MODEL)
+
+    # Uncomment the line below to test model on images
+    # inference("../images", BEST_TRAINED_MODEL)
     
