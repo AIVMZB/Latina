@@ -1,0 +1,8 @@
+path: E:\Лабораторні\3 курс\Latina\LatinaProject\datasets\lines
+train: .\train
+val: .\validation
+
+nc: 1
+
+names:
+  0: line
