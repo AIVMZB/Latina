@@ -42,7 +42,7 @@ def inference(images_dir: str,
 
     images = list(map(lambda name: os.path.join(images_dir, name), image_names))
 
-    results = model.predict(images[:1], conf=min_confidence)
+    results = model.predict(images, conf=min_confidence)
 
     if not os.path.exists("../predictions"):
         os.mkdir("../predictions")
@@ -65,5 +65,5 @@ if __name__ == "__main__":
     # inference("../images", WORD_DETECT_BEST_MODEL, min_confidence=0.3)
 
     # Uncomment the line below to test model on detecting lines
-    # inference("../datasets/lines-obb/test/images", LINES_OBB_BEST, min_confidence=0.1, show=True)
+    inference("../datasets/lines-obb/valid/images", LINES_OBB_BEST, min_confidence=0.1, show=True)
     ...
