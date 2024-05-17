@@ -22,7 +22,7 @@ LINES_OBB_BEST = os.path.join("models", "lines_obb_best.pt")
 def fixup_yaml(yaml_path: str) -> None:
     """Fix the absolute path to datasets in a yaml configuration"""
     if not os.path.exists(yaml_path):
-        print(f"ERROR: Can not fixup'{yaml_path}', REASON: Does not exist")
+        print(f"ERROR: Can not fixup '{yaml_path}', REASON: Does not exist")
         return
 
     with open(yaml_path, 'r') as file:
