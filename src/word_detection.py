@@ -65,5 +65,5 @@ if __name__ == "__main__":
     # inference("../images", WORD_DETECT_BEST_MODEL, min_confidence=0.3)
 
     # Uncomment the line below to test model on detecting lines
-    inference("../datasets/lines-obb/valid/images", LINES_OBB_BEST, min_confidence=0.1, show=True)
+    # inference("../datasets/lines-obb/valid/images", LINES_OBB_BEST, min_confidence=0.1, show=True)
     ...
