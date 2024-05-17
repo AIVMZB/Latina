@@ -4,3 +4,6 @@ src/runs
 predictions
 dataset
 images
+runs
+datasets
+src/yolov*
