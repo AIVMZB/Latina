@@ -1,4 +1,4 @@
-path: E:\Лабораторні\3 курс\Latina\LatinaProject\datasets\lines-obb
+path: ..\datasets\lines-obb
 
 train: train/images
 val: valid/images

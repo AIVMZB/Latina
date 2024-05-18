@@ -1,4 +1,4 @@
-path: E:\Лабораторні\3 курс\Latina\LatinaProject\datasets\words_lines
+path: ..\datasets\words_lines
 train: .\train
 val: .\validation
 
