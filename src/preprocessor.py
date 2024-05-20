@@ -7,20 +7,20 @@ import os
 class Preprocessor:
     def __init__(
         self,
-        contrast: float, invert_colors: bool,
-        denoise_intensity: int,
-        sharpen_intensity: float,
-        input_path: str, output_path: str = None
+        input_path: str, output_path: str = None,
+        contrast: float = 1.0, invert_colors: bool = True,
+        denoise_intensity: int = 5,
+        sharpen_intensity: float = 7,
     ):
+        # Path variables
+        self.input_path  = input_path
+        self.output_path = output_path if output_path else input_path
+
         # Image processing settings
         self.contrast = contrast
         self.invert_colors = invert_colors
         self.denoise_intensity = denoise_intensity
         self.sharpen_intensity = sharpen_intensity
-
-        # Path variables
-        self.input_path  = input_path
-        self.output_path = output_path if output_path else input_path
     
     def process(self, image_file):
         # Load initial image
@@ -69,12 +69,8 @@ class Preprocessor:
 
 if __name__ == "__main__":
     preprocessor = Preprocessor(
-       contrast = 1.1,
-       invert_colors = False,
-       denoise_intensity = 5,
-       sharpen_intensity = 7,
-       input_path = "images/",
-       output_path = "processed/"
+        input_path = "images/",
+        output_path = "processed/"
     )
 
     preprocessor.execute()
