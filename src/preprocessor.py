@@ -11,6 +11,7 @@ class Preprocessor:
         contrast: float = 1.0, invert_colors: bool = True,
         denoise_intensity: int = 5,
         sharpen_intensity: float = 7,
+        morphological_kernel: np.ones = np.ones((2, 2), np.uint8)
     ):
         # Path variables
         self.input_path  = input_path
@@ -21,6 +22,7 @@ class Preprocessor:
         self.invert_colors = invert_colors
         self.denoise_intensity = denoise_intensity
         self.sharpen_intensity = sharpen_intensity
+        self.morphological_kernel = morphological_kernel
     
     def process(self, image_file):
         # Load initial image
@@ -41,13 +43,10 @@ class Preprocessor:
         ])
         img = cv.filter2D(img, 0, kernel)
 
-        """ 
-            Warning: Do not use, sh*t
-            Morphological operations to remove noise and fill gaps
-        """
-        #kernel = np.ones((2, 2), np.uint8)
-        #img = cv.dilate(img, kernel, iterations=1)
-        #img = cv.erode(img, kernel, iterations=1)
+        # Not needed most of the time (play with it)
+        # Morphological operations to remove noise and fill gaps
+        #img = cv.dilate(img, self.morphological_kernel, iterations=1)
+        #img = cv.erode(img, self.morphological_kernel, iterations=1)
 
         # Binarization and invert
         _, img = cv.threshold(
