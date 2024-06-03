@@ -1,6 +1,9 @@
 from math import sqrt
 import numpy as np
 import os
+import cv2
+import matplotlib.pyplot as plt
+from shapely.geometry import Polygon
 
 """
 TODO
@@ -15,7 +18,7 @@ Okay, I have probably figured it out. The algorithm goes as follows:
 
 """
 
-def parse_word_bboxes(filename: str, class_num: str = "0") -> list:
+def read_bboxes(filename: str, class_num: str = "0") -> list:
     bboxes = []
     with open(filename, 'r') as file:
         for line in file:
@@ -99,28 +102,90 @@ def calc_shape_area(shape: list) -> float:
     
     return area
 
-
-def intersection_shape(shape_1: list, shape_2: list) -> list:
-    int_shape = []
-
-    for i in range(0, len(shape_1) - 1, 2):
-        x, y = shape_1[i], shape_1[i + 1]
-        if point_in_shape(shape_2, x, y):
-            int_shape.append([x, y])
+def obb_to_polygon(obb: list) -> Polygon:
+    points = []
+    for i in range(0, len(obb), 2):
+        points.append((obb[i], obb[i + 1]))
     
-    for i in range(0, len(shape_2) - 1, 2):
-        x, y, = shape_2[i], shape_2[i + 1]
-        if point_in_shape(shape_1, x, y):
-            int_shape.append([x, y])
+    return Polygon(points)
 
-    return int_shape
+def intersection_area(shape_1: list, shape_2: list) -> list:
+    pol_1 = obb_to_polygon(shape_1)
+    pol_2 = obb_to_polygon(shape_2)
+
+    return pol_1.intersection(pol_2).area
+
+def obb_to_image_coords(width: int, height: int, obb: list) -> list:
+    image_obb = []
+    for i in range(len(obb)):
+        if i % 2 == 0:
+            image_obb.append(int(obb[i] * width))
+        else:
+            image_obb.append(int(obb[i] * height))
+
+    return image_obb
+
+def find_intersected_words(line_obb: list, word_bboxes: list, 
+                           width: int, height: int, 
+                           thresh: float = 0.3) -> list:
+    """
+    line_obb - bbox of line
+    word_bboxes - list of bboxes of words
+    thresh - intersection threshold
+    """
+    
+    intersected_words = []
+    line_obb = obb_to_image_coords(width, height, line_obb)
+    for word_bbox in word_bboxes:
+        word_obb = bbox_to_obb(word_bbox)
+        word_obb = obb_to_image_coords(width, height, word_obb)
+        
+        if intersection_area(line_obb, word_obb) / obb_to_polygon(word_obb).area > thresh:
+            intersected_words.append(word_bbox)
+
+    return intersected_words
+
+def show_obb_on_image(image: np.ndarray, obb: list, color: tuple = (0, 0, 255)) -> np.ndarray:
+    im_obb = np.zeros((4, 2), dtype=np.int32)
+    width = image.shape[0]
+    height = image.shape[1]
+
+    for i in range(0, len(obb), 2):
+        im_obb[i // 2][0] = round(obb[i] * height) if obb[i] > 0 else 0
+        im_obb[i // 2][1] = round(obb[i + 1] * width) if obb[i + 1] > 0 else 0
+    
+    im_obb = im_obb.reshape((-1, 1, 2))
+
+    return cv2.polylines(image, [im_obb], True, color, 5)
 
 
-def find_intersected_words(line_obb: list, word_bboxes: list, thresh: float = 0.3) -> list:
-    ...
+def show_bbox_on_image(image: np.ndarray, bbox: list, color: tuple = (0, 0, 255)) -> np.ndarray:
+    obb = bbox_to_obb(bbox)
 
+    return show_obb_on_image(image, obb, color)
 
 if __name__ == "__main__":
-    print(
-        intersection_shape([0, 0, 2, 0, 2, 2, 0, 2], [1, 1, 3, 1, 3, 3, 1, 3])
-    )
+    lines_obb_data = "../datasets/lines-obb"
+    words_data = "../datasets/words"
+    
+    lines = read_bboxes("..\datasets\lines-obb\\train\labels\AUR_1051_II_08-101-text-_jpg.rf.0d97b8261dce428a4f663c3ffef3e02c.txt")
+    words = read_bboxes("..\datasets\words\\train\AUR_1051_II_08-101 (text).txt")
+
+    # words_in_line = find_intersected_words(line, words)
+    for line in lines:
+        image = cv2.imread("..\datasets\lines-obb\\train\images\AUR_1051_II_08-101-text-_jpg.rf.0d97b8261dce428a4f663c3ffef3e02c.jpg")
+
+        int_words = find_intersected_words(line, words, image.shape[1], image.shape[0], thresh=0.5)
+
+        for word in words:
+            image = show_bbox_on_image(image, word)
+        
+        for word in int_words:
+            image = show_bbox_on_image(image, word, (255, 0, 0))
+
+        image = show_obb_on_image(image, line, (0, 255, 0))
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        plt.imshow(image)
+        plt.show()
