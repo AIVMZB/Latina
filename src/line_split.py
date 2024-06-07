@@ -1,121 +1,113 @@
-from math import sqrt
 import numpy as np
-import os
 import cv2
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
+from typing import NamedTuple, Union, Sequence
+from prettyprinter import pprint
 
-"""
-TODO
 
-Okay, I have probably figured it out. The algorithm goes as follows:
+class Bbox(NamedTuple):
+    cx: float
+    cy: float
+    w: float
+    h: float
 
-1) For each vertex of the first quadrilateral, check whether it is contained inside the second one - if so, store coordinates of the point.
-2) For each vertex of the second quadrilateral, check whether it is contained inside the first one - if so, store coordinates of the point.
-3) For each edge of one of the quadrilaterals (does not matter which one), check for intersections with edges of the other. Store coordinates of intersection points.
-4) Compute triangulation for all the points stored so far.
-5) Sum up areas of the triangles.
 
-"""
+class Obb(NamedTuple):
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    x3: float
+    y3: float
+    x4: float
+    y4: float
 
-def read_bboxes(filename: str, class_num: str = "0") -> list:
-    bboxes = []
+
+def to_bbox(bbox_list: Sequence) -> Bbox:
+    """
+    Creates a Bbox object from a sequence of values.
+
+    Args:
+        bbox_list (Sequence): A sequence of values representing the coordinates of a bounding box. The sequence should have exactly four values: [x, y, width, height].
+
+    Returns:
+        Bbox: A Bbox object representing the bounding box with the given coordinates.
+    """
+
+    return Bbox(*bbox_list)
+
+
+def to_obb(shape: Union[Bbox, Sequence]) -> Obb:
+    """
+    Convert a shape to an Obb (Oriented Bounding Box) object.
+
+    Args:
+        shape (Union[Bbox, Sequence]): The shape to be converted. It can be either a Bbox object or a sequence of values.
+
+    Returns:
+        Obb: The Obb object representing the converted shape.
+
+    Raises:
+        TypeError: If the shape is neither a Bbox object nor a sequence of values.
+
+    """
+    if isinstance(shape, Bbox):
+        return bbox_to_obb(shape)
+    elif isinstance(shape, Sequence):
+        return Obb(*shape)
+
+
+def read_shapes(filename: str, class_num: str = "0", 
+                transform_func: callable = to_bbox) -> Union[list[Bbox], list[Obb]]:
+    """
+    Reads shapes from a file and transforms them using a given function.
+
+    Args:
+        filename (str): The name of the file to read.
+        class_num (str, optional): The class number to filter the shapes. Defaults to "0".
+        transform_func (callable, optional): The function to transform the shapes. Defaults to to_bbox.
+
+    Returns:
+        Union[list[Bbox], list[Obb]]: A list of readed shapes.
+    """
+    shapes = []
     with open(filename, 'r') as file:
         for line in file:
             values = line.split(" ")
             if values[0] != class_num:
                 continue
-            bboxes.append(
-                list(map(float, values[1:]))
+            shapes.append(
+                transform_func(list(map(float, values[1:])))
             )
     
-    return bboxes
+    return shapes
 
 
-def bbox_to_obb(bbox: list) -> list:
+def bbox_to_obb(bbox: Union[list, Bbox]) -> Obb:
     cx, cy = bbox[0], bbox[1]
     W, H = bbox[2], bbox[3]
     w, h = W / 2, H / 2
 
-    return [cx - w, cy + h, cx + w, cy + h, cx + w, cy - h, cx - w, cy - h]
+    return to_obb([cx - w, cy + h, cx + w, cy + h, cx + w, cy - h, cx - w, cy - h])
 
 
-def is_rectangle(*coords) -> bool:
-    if len(coords) != 8:
-        return False
-
-    a = np.array(coords[2:4]) - np.array(coords[:2])
-    b = np.array(coords[4:6]) - np.array(coords[2:4])
-    c = np.array(coords[6:8]) - np.array(coords[4:6])
-    d = np.array(coords[:2]) - np.array(coords[6:8])    
-
-    return a @ b == 0 and b @ c == 0 and c @ d == 0 and d @ a == 0
-
-
-def calc_triangle_area(*coords) -> float:
-    if len(coords) != 6:
-        raise ValueError("Number of point coordinates must be 6")
-    
-    a = sqrt((coords[2] - coords[0]) ** 2 + (coords[3] - coords[1]) ** 2)
-    b = sqrt((coords[4] - coords[2]) ** 2 + (coords[5] - coords[3]) ** 2)
-    c = sqrt((coords[0] - coords[4]) ** 2 + (coords[1] - coords[5]) ** 2)
-    p = (a + b + c) / 2
-
-    return sqrt(p * (p - a) * (p - b) * (p - c))
-    
-
-def point_in_shape(shape: list, x: float, y: float) -> bool:
-    shape_area = calc_shape_area(shape)
-
-    point = [x, y]
-    shape_points = []
-    for i in range(0, len(shape) - 1, 2):
-        shape_points.append([shape[i], shape[i + 1]])
-
-    check_area = 0    
-    for i in range(len(shape_points)):
-        if i != len(shape_points) - 1:
-            check_area += calc_triangle_area(
-                *(point + shape_points[i] + shape_points[i + 1])
-            )
-        else:
-            check_area += calc_triangle_area(
-                *(point + shape_points[i] + shape_points[0])
-            )
-
-    return check_area <= shape_area
-
-
-def calc_shape_area(shape: list) -> float:
-    if len(shape) % 2 != 0:
-        raise ValueError("The number of shape's points must be even number")
-    if len(shape) <= 4:
-        return 0
-    
-    points = []
-    for i in range(0, len(shape) - 1, 2):
-        points.append([shape[i], shape[i + 1]])
-    
-    area = 0
-    for i in range(1, len(points) - 1):
-        area += calc_triangle_area(*(points[0] + points[i] + points[i + 1]))
-    
-    return area
-
-def obb_to_polygon(obb: list) -> Polygon:
+def obb_to_polygon(obb: Union[list, Obb]) -> Polygon:
     points = []
     for i in range(0, len(obb), 2):
         points.append((obb[i], obb[i + 1]))
-    
+
     return Polygon(points)
 
-def intersection_area(shape_1: list, shape_2: list) -> list:
+
+def intersection_area(shape_1: Obb, shape_2: Obb) -> list:
     pol_1 = obb_to_polygon(shape_1)
     pol_2 = obb_to_polygon(shape_2)
 
     return pol_1.intersection(pol_2).area
 
-def obb_to_image_coords(width: int, height: int, obb: list) -> list:
+
+def obb_to_image_coords(width: int, height: int, obb: Obb) -> Obb:
     image_obb = []
     for i in range(len(obb)):
         if i % 2 == 0:
@@ -123,29 +115,53 @@ def obb_to_image_coords(width: int, height: int, obb: list) -> list:
         else:
             image_obb.append(int(obb[i] * height))
 
-    return image_obb
+    return to_obb(image_obb)
 
-def find_intersected_words(line_obb: list, word_bboxes: list, 
-                           width: int, height: int, 
-                           thresh: float = 0.3) -> list:
+
+def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> Obb:
+    """Counts intersection of lines with the specified word and picks a line with the highest intersection area"""
+
+    best_intersection = 0
+    best_line_index = None
+    for i, line_bbox in enumerate(line_bboxes):
+        intersection = intersection_area(word_obb, line_bbox)
+        if intersection > best_intersection:
+            best_intersection = intersection
+            best_line_index = i
+            
+    return best_line_index
+
+
+def find_words_in_line(line_obb: Obb, word_bboxes: list[Bbox], 
+                       width: int, height: int, 
+                       thresh: float = 0.5) -> list:
     """
-    line_obb - bbox of line
-    word_bboxes - list of bboxes of words
-    thresh - intersection threshold
+    Finds the indexes of words that intersect with a given line.
+
+    Args:
+        line_obb (Obb): The oriented bounding box of the line.
+        word_bboxes (list[Bbox]): The bounding boxes of the words.
+        width (int): The width of the image.
+        height (int): The height of the image.
+        thresh (float, optional): The threshold for intersection area. Defaults to 0.5.
+
+    Returns:
+        list: The indexes of the intersected words.
     """
     
-    intersected_words = []
+    intersected_words_indexes = []
     line_obb = obb_to_image_coords(width, height, line_obb)
-    for word_bbox in word_bboxes:
+    for i, word_bbox in enumerate(word_bboxes):
         word_obb = bbox_to_obb(word_bbox)
         word_obb = obb_to_image_coords(width, height, word_obb)
         
         if intersection_area(line_obb, word_obb) / obb_to_polygon(word_obb).area > thresh:
-            intersected_words.append(word_bbox)
+            intersected_words_indexes.append(i)
 
-    return intersected_words
+    return intersected_words_indexes
 
-def show_obb_on_image(image: np.ndarray, obb: list, color: tuple = (0, 0, 255)) -> np.ndarray:
+
+def show_obb_on_image(image: np.ndarray, obb: Obb, color: tuple = (0, 0, 255)) -> np.ndarray:
     im_obb = np.zeros((4, 2), dtype=np.int32)
     width = image.shape[0]
     height = image.shape[1]
@@ -159,33 +175,65 @@ def show_obb_on_image(image: np.ndarray, obb: list, color: tuple = (0, 0, 255)) 
     return cv2.polylines(image, [im_obb], True, color, 5)
 
 
-def show_bbox_on_image(image: np.ndarray, bbox: list, color: tuple = (0, 0, 255)) -> np.ndarray:
+def show_bbox_on_image(image: np.ndarray, bbox: Bbox, color: tuple = (0, 0, 255)) -> np.ndarray:
     obb = bbox_to_obb(bbox)
 
     return show_obb_on_image(image, obb, color)
 
-if __name__ == "__main__":
-    lines_obb_data = "../datasets/lines-obb"
-    words_data = "../datasets/words"
+
+def show_word_and_line(image: np.ndarray, word: Bbox, lines: list[Obb]) -> np.ndarray:
+    line = find_line_for_word(word, lines)
+
+    image = show_obb_on_image(image, line)
+    return show_obb_on_image(image, word, (255, 0, 0))
+
+
+def index_in_map(table: dict, index: int) -> bool:
+    for values in table.values():
+        if index in values:
+            return True
+
+    return False
+
+
+def map_words_to_lines(words: list[Bbox], lines: list[Obb], image: np.ndarray) -> dict:
+    line_to_words = {}
+    count = 0
+    for i, line in enumerate(lines):
+        line_to_words[i] = find_words_in_line(line, words, image.shape[1], image.shape[0])
+        count += len(line_to_words[i])
     
-    lines = read_bboxes("..\datasets\lines-obb\\train\labels\AUR_1051_II_08-101-text-_jpg.rf.0d97b8261dce428a4f663c3ffef3e02c.txt")
-    words = read_bboxes("..\datasets\words\\train\AUR_1051_II_08-101 (text).txt")
-
-    # words_in_line = find_intersected_words(line, words)
-    for line in lines:
-        image = cv2.imread("..\datasets\lines-obb\\train\images\AUR_1051_II_08-101-text-_jpg.rf.0d97b8261dce428a4f663c3ffef3e02c.jpg")
-
-        int_words = find_intersected_words(line, words, image.shape[1], image.shape[0], thresh=0.5)
-
-        for word in words:
-            image = show_bbox_on_image(image, word)
+    if count == len(words):
+        return line_to_words
+    
+    for i, word in enumerate(words):
+        if index_in_map(line_to_words, i):
+            continue
         
-        for word in int_words:
-            image = show_bbox_on_image(image, word, (255, 0, 0))
+        line_index = find_line_for_word(to_obb(word), lines)
 
-        image = show_obb_on_image(image, line, (0, 255, 0))
+        line_to_words[line_index].append(i)
 
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    return line_to_words
 
-        plt.imshow(image)
-        plt.show()
+
+if __name__ == "__main__":
+    lines = read_shapes("..\datasets\lines-obb\\test\labels\AUR_945_VI_4-101-text-_jpg.rf.f05201b45f7215a2eb52c9750eed34e6.txt",
+                        transform_func=to_obb)
+    words = read_shapes("..\datasets\words\\train\AUR_945_VI_4-101 (text).txt",
+                        transform_func=to_bbox)
+
+    image = cv2.imread("../datasets/lines-obb/test/images/AUR_945_VI_4-101-text-_jpg.rf.f05201b45f7215a2eb52c9750eed34e6.jpg")
+
+    line_to_words = map_words_to_lines(words, lines, image)
+    pprint(line_to_words)
+
+    # for i in line_to_words[0]:
+    #     word = words[i]
+    #     word = to_obb(word)
+    #     # word = obb_to_image_coords(image.shape[1], image.shape[0], word)
+    #     image = show_obb_on_image(image, word)
+
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # plt.imshow(image)
+    # plt.show()
