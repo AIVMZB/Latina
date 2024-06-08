@@ -161,7 +161,7 @@ def find_words_in_line(line_obb: Obb, word_bboxes: list[Bbox],
     return intersected_words_indexes
 
 
-def show_obb_on_image(image: np.ndarray, obb: Obb, color: tuple = (0, 0, 255)) -> np.ndarray:
+def plot_obb_on_image(image: np.ndarray, obb: Obb, color: tuple = (0, 0, 255)) -> np.ndarray:
     im_obb = np.zeros((4, 2), dtype=np.int32)
     width = image.shape[0]
     height = image.shape[1]
@@ -175,17 +175,17 @@ def show_obb_on_image(image: np.ndarray, obb: Obb, color: tuple = (0, 0, 255)) -
     return cv2.polylines(image, [im_obb], True, color, 5)
 
 
-def show_bbox_on_image(image: np.ndarray, bbox: Bbox, color: tuple = (0, 0, 255)) -> np.ndarray:
+def line_bbox_on_image(image: np.ndarray, bbox: Bbox, color: tuple = (0, 0, 255)) -> np.ndarray:
     obb = bbox_to_obb(bbox)
 
-    return show_obb_on_image(image, obb, color)
+    return plot_obb_on_image(image, obb, color)
 
 
-def show_word_and_line(image: np.ndarray, word: Bbox, lines: list[Obb]) -> np.ndarray:
+def plot_word_and_line(image: np.ndarray, word: Bbox, lines: list[Obb]) -> np.ndarray:
     line = find_line_for_word(word, lines)
 
-    image = show_obb_on_image(image, line)
-    return show_obb_on_image(image, word, (255, 0, 0))
+    image = plot_obb_on_image(image, line)
+    return plot_obb_on_image(image, word, (255, 0, 0))
 
 
 def index_in_map(table: dict, index: int) -> bool:
@@ -227,13 +227,3 @@ if __name__ == "__main__":
 
     line_to_words = map_words_to_lines(words, lines, image)
     pprint(line_to_words)
-
-    # for i in line_to_words[0]:
-    #     word = words[i]
-    #     word = to_obb(word)
-    #     # word = obb_to_image_coords(image.shape[1], image.shape[0], word)
-    #     image = show_obb_on_image(image, word)
-
-    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    # plt.imshow(image)
-    # plt.show()

@@ -54,7 +54,7 @@ def inference(images_dir: str,
 
 if __name__ == "__main__":
     # Uncomment the line below to train to detect lines oriented bboxes
-    train_detection_model(epochs=5, data_file="lines_obb_data.yaml", model_path="yolov8n-obb.pt")
+    # train_detection_model(epochs=5, data_file="lines_obb_data.yaml", model_path="yolov8n-obb.pt")
 
     
     # Uncomment the line below to train to detect words bboxes
@@ -62,7 +62,8 @@ if __name__ == "__main__":
 
 
     # Uncomment the line below to test model on detecting words
-    # inference("../images", WORD_DETECT_BEST_MODEL, min_confidence=0.3)
+    inference("../images", LINES_OBB_BEST, min_confidence=0.3)
+
 
     # Uncomment the line below to test model on detecting lines
     # inference("../datasets/lines-obb/valid/images", LINES_OBB_BEST, min_confidence=0.1, show=True)
