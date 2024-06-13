@@ -232,3 +232,5 @@ if __name__ == "__main__":
 
     # Splitting it to train and validation
     # split_dataset("..\datasets\words-in-lines", "..\datasets\words-in-lines-splitted")
+    ...
+    
