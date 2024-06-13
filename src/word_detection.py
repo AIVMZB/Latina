@@ -20,7 +20,7 @@ LINES_OBB_BEST = os.path.join("models", "lines_obb_best.pt")
 
 
 def train_detection_model(model_path: str = YOLO_MOLDEL, 
-                          data_file: str = "words_data.yaml",
+                          data_file: str = "yamls/words_data.yaml",
                           epochs: int = 50) -> None:
     """Trains a model. The results of training will be stored at run/detect directory"""
 
@@ -54,16 +54,15 @@ def inference(images_dir: str,
 
 if __name__ == "__main__":
     # Uncomment the line below to train to detect lines oriented bboxes
-    # train_detection_model(epochs=5, data_file="lines_obb_data.yaml", model_path="yolov8n-obb.pt")
+    # train_detection_model(epochs=5, data_file="yamls/lines_obb_data.yaml", model_path="yolov8n-obb.pt")
 
     
     # Uncomment the line below to train to detect words bboxes
-    # train_detection_model(epochs=5, data_file="words_data.yaml", model_path="yolov8n.pt")
+    # train_detection_model(epochs=150, data_file="yamls/words_data.yaml", model_path="yolov8m.pt")
 
 
     # Uncomment the line below to test model on detecting words
-    inference("../images", LINES_OBB_BEST, min_confidence=0.3)
-
+    # inference("../preprocessed_images", "../runs/detect/words/weights/best.pt", min_confidence=0.1)
 
     # Uncomment the line below to test model on detecting lines
     # inference("../datasets/lines-obb/valid/images", LINES_OBB_BEST, min_confidence=0.1, show=True)
