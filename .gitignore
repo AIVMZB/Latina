@@ -7,3 +7,5 @@ images
 runs
 datasets
 src/yolov*
+preprocessed_images
+preprocessed_images(inverted)
