@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import shapes_util as su
 from skimage.draw import polygon2mask
 import os
+import random
+import shutil
 
 
 # TODO: Implement transforming words coordinates to line space according to the belonging
@@ -195,15 +197,26 @@ def create_dataset_of_lines(words_dataset_path: str = "..\datasets\words",
             print(f"[ERROR] {word_image_name} failed")
             print(e)
 
-if __name__ == "__main__":
-    # TODO: Create datased with image for each
-    image = cv2.imread(
-        "..\datasets\words\\validation\AUR_889_X_5(15)-101 (text).jpg")
-    lines: list[Obb] = su.read_shapes(
-        "..\datasets\lines-obb\\test\labels\AUR_889_X_5-15-101-text-_jpg.rf.e2800ba0157f1988cbd011f68c072622.txt",
-        transform_func=su.to_obb)
-    words = su.read_shapes("..\datasets\words\\validation\AUR_889_X_5(15)-101 (text).txt", transform_func=su.to_bbox)
-
-    image_name = "AUR_889_X_5(15)-101 (text).jpg"
+def split_dataset(dataset_path: str, output_path: str):
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
     
-    create_lines_dataset_from_image(image_name, "..\datasets\words\\validation", lines, words, "..\datasets\words-in-lines", white_bg=False)
+    if not os.path.exists(os.path.join(output_path, "train")):
+        os.mkdir(os.path.join(output_path, "train"))
+    
+    if not os.path.exists(os.path.join(output_path, "validation")):
+        os.mkdir(os.path.join(output_path, "validation"))
+    
+    for file in os.listdir(dataset_path):
+        if file.endswith(".jpg"):
+            if random.random() < 0.8:
+                shutil.copy(os.path.join(dataset_path, file), os.path.join(output_path, "train", file))
+                shutil.copy(os.path.join(dataset_path, file[:-4] + ".txt"), os.path.join(output_path, "train", file[:-4] + ".txt"))
+            else:
+                shutil.copy(os.path.join(dataset_path, file), os.path.join(output_path, "validation", file))
+                shutil.copy(os.path.join(dataset_path, file[:-4] + ".txt"), os.path.join(output_path, "validation", file[:-4] + ".txt"))
+
+
+if __name__ == "__main__":
+    # TODO: split to train and validation
+    split_dataset("..\datasets\words-in-lines", "..\datasets\words-in-lines-splitted")
