@@ -101,6 +101,7 @@ def words_to_line_space(words: list[Bbox], line: Obb) -> list[Bbox]:
 
     return line_words
 
+
 def write_bboxes_to_file(bboxes: list[Bbox], filename: str, class_name: str) -> None:
     with open(filename, 'w') as file:
         for bbox in bboxes:
@@ -143,6 +144,7 @@ def find_label_file_in_dirs(dirs: list[str], image_name: str) -> str:
         for file in os.listdir(dir):
             if file.startswith(image_name[:-12]) and file.endswith(".txt"):
                 return os.path.join(dir, file)
+
 
 def create_dataset_of_lines(words_dataset_path: str = "..\datasets\words",
                             lines_dataset_path: str = "..\datasets\lines-obb",
@@ -197,6 +199,7 @@ def create_dataset_of_lines(words_dataset_path: str = "..\datasets\words",
             print(f"[ERROR] {word_image_name} failed")
             print(e)
 
+
 def split_dataset(dataset_path: str, output_path: str):
     if not os.path.exists(output_path):
         os.mkdir(output_path)
@@ -221,16 +224,15 @@ if __name__ == "__main__":
     # TODO: split to train and validation
 
     # Creation of lines dataset
-    # create_dataset_of_lines()
-    # image_name = "AUR_889_X_5(15)-101 (text).jpg"
-    # image_dir = "..\\datasets\\words\\validation"
-    # lines = su.read_shapes("..\datasets\lines-obb\\test\labels\AUR_889_X_5-15-101-text-_jpg.rf.e2800ba0157f1988cbd011f68c072622.txt",
-    #                         transform_func=su.to_obb)
-    # words = su.read_shapes("..\datasets\words\\validation\AUR_889_X_5(15)-101 (text).txt", 
-    #                        transform_func=su.to_bbox)
-    # create_lines_dataset_from_image(image_name, image_dir, lines, words, "..\datasets\words-in-lines", white_bg=False)
+    create_dataset_of_lines()
+    image_name = "AUR_889_X_5(15)-101 (text).jpg"
+    image_dir = "..\\datasets\\words\\validation"
+    lines = su.read_shapes("..\datasets\lines-obb\\test\labels\AUR_889_X_5-15-101-text-_jpg.rf.e2800ba0157f1988cbd011f68c072622.txt",
+                            transform_func=su.to_obb)
+    words = su.read_shapes("..\datasets\words\\validation\AUR_889_X_5(15)-101 (text).txt", 
+                           transform_func=su.to_bbox)
+    create_lines_dataset_from_image(image_name, image_dir, lines, words, "..\datasets\words-in-lines", white_bg=False)
 
     # Splitting it to train and validation
-    # split_dataset("..\datasets\words-in-lines", "..\datasets\words-in-lines-splitted")
+    split_dataset("..\datasets\words-in-lines", "..\datasets\words-in-lines-splitted")
     ...
-    
