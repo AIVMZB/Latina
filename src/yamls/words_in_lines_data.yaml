@@ -1,0 +1,7 @@
+path: ..\datasets\words-in-lines-splitted
+
+train: .\train
+val: .\validation
+
+names:
+  0: word

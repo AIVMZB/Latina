@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # TODO: try to copy files and train for more epochs
     # train_detection_model(epochs=100, data_file="yamls/words_in_lines_data.yaml", model_path="yolov8m.pt", imgsz=700)
 
-    predict_by_words_in_lines("..\images\AUR_1014_VI_21-101 (text).jpg", 
+    predict_by_words_in_lines("..\images\AUR_1020_IV_23-101 (text).jpg", 
                               LINES_OBB_BEST, 
                               "../runs/detect/train12/weights/best.pt",
                               min_confidence=0.1)
