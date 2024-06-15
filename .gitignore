@@ -3,6 +3,7 @@ venv
 src/runs
 predictions
 dataset
+datasets.zip
 images
 runs
 datasets
