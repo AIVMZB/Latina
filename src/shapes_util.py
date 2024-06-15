@@ -197,6 +197,17 @@ def index_in_map(table: dict, index: int) -> bool:
 
 
 def map_words_to_lines(words: list[Bbox], lines: list[Obb], image: np.ndarray) -> dict:
+    """
+    Maps words to lines in an image.
+
+    Args:
+        words (list[Bbox]): A list of bounding boxes representing words in the image.
+        lines (list[Obb]): A list of oriented bounding boxes representing lines in the image.
+        image (np.ndarray): The image array.
+
+    Returns:
+        dict: A dictionary mapping line indices to word indices.
+    """
     line_to_words = {}
     count = 0
     for i, line in enumerate(lines):
