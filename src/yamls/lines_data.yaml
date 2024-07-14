@@ -1,8 +1,0 @@
-path: ..\datasets\lines
-train: .\train
-val: .\validation
-
-nc: 1
-
-names:
-  0: line

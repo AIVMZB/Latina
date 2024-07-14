@@ -10,3 +10,4 @@ datasets
 src/yolov*
 preprocessed_images
 preprocessed_images(inverted)
+src/__pycache__/

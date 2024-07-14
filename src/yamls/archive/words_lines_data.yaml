@@ -1,0 +1,10 @@
+path: ..\datasets\words_lines
+train: .\train
+val: .\validation
+
+nc: 2
+
+names:
+  0: line
+  1: word
+  

@@ -17,12 +17,12 @@ TORCH_DEVICE = torch.device(dev)
 YOLO_DEVICE = [0] if dev == "cuda:0" else "cpu"   
 
 IMG_SIZE = 1024
-YOLO_MOLDEL = os.path.join("models", "yolov8n.pt")
+YOLO_MODEL = os.path.join("models", "yolov8n.pt")
 WORD_DETECT_BEST_MODEL = os.path.join("models", "word_detect_best.pt")
 LINES_OBB_BEST = os.path.join("models", "lines_obb_best.pt")
 
 
-def train_detection_model(model_path: str = YOLO_MOLDEL, 
+def train_detection_model(model_path: str = YOLO_MODEL, 
                           data_file: str = "yamls/words_data.yaml",
                           epochs: int = 50,
                           imgsz: int = IMG_SIZE) -> None:
@@ -59,6 +59,9 @@ def predict_by_words_in_lines(image_path: str,
                               line_model_path: str, 
                               word_model_path: str,
                               min_confidence: float = 0.1) -> None: 
+    if not os.path.exists("../predictions"):
+        os.mkdir("../predictions")
+
     line_model = YOLO(line_model_path).to(TORCH_DEVICE)
     word_model = YOLO(word_model_path).to(TORCH_DEVICE)
 

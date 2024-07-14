@@ -1,8 +1,0 @@
-path: ..\datasets\words
-train: .\train
-val: .\validation
-
-nc: 1
-
-names:
-  0: word
