@@ -1,13 +1,10 @@
 venv
 .idea
-src/runs
 predictions
-dataset
-datasets.zip
 images
 runs
 datasets
-src/yolov*
+*yolov*.pt
 preprocessed_images
 preprocessed_images(inverted)
 *__pycache__*

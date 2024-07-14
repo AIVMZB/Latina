@@ -58,8 +58,7 @@ def to_obb(shape: Union[Bbox, Sequence]) -> Obb:
         return Obb(*shape)
 
 
-def read_shapes(filename: str, class_num: str = "0", 
-                transform_func: callable = to_bbox) -> Union[list[Bbox], list[Obb]]:
+def read_shapes(filename: str, transform_func: callable, class_num: str = "0") -> Union[list[Bbox], list[Obb]]:
     """
     Reads shapes from a file and transforms them using a given function.
 
