@@ -1,8 +1,8 @@
 from ultralytics import YOLO
 import torch
 import os
-from word_to_lines import crop_line_from_image
-from shapes_util import Obb
+from bbox_utils.word_to_lines import crop_line_from_image
+from bbox_utils.shapes_util import Obb
 import cv2
 
 
@@ -17,9 +17,9 @@ TORCH_DEVICE = torch.device(dev)
 YOLO_DEVICE = [0] if dev == "cuda:0" else "cpu"   
 
 IMG_SIZE = 1024
-YOLO_MODEL = os.path.join("models", "yolov8n.pt")
-WORD_DETECT_BEST_MODEL = os.path.join("models", "word_detect_best.pt")
-LINES_OBB_BEST = os.path.join("models", "lines_obb_best.pt")
+YOLO_MODEL = os.path.join("..", "models", "yolov8n.pt")
+WORD_DETECT_BEST_MODEL = os.path.join("..", "models", "word_detect_best.pt")
+LINES_OBB_BEST = os.path.join("..", "models", "lines_obb_best.pt")
 
 
 def train_detection_model(model_path: str = YOLO_MODEL, 
