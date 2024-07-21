@@ -1,4 +1,4 @@
-from .shapes_util import Obb, read_shapes, to_obb, plot_obb_on_image
+from shapes_util import Obb, read_shapes, to_obb, plot_obb_on_image
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
@@ -64,7 +64,7 @@ def model_results_to_obbs(results: np.ndarray) -> list[Obb]:
 
 
 if __name__ == "__main__":
-    img_path = r"E:\Labs\year_3\Latina\LatinaProject\images\AUR_891_III_9-101 (text).jpg"
+    img_path = r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean\valid\AUR_831_VI_19-101 (text).jpg"
     model_path = r"E:\Labs\year_3\Latina\LatinaProject\models\lines_obb_m_best.pt"
     model = YOLO(model_path)
 
