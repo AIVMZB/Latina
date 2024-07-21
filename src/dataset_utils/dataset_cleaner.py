@@ -123,15 +123,4 @@ def clear_dir_from_outliers(dir: str, new_dir: str, outliers: list):
             print(f"Copying {os.path.join(dir, filename)}")
         else:
             print(f"Ignoring {os.path.join(dir, filename)}")
-
-
-if __name__ == "__main__":
-    clear_dataset_from_outliers(
-        r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb",
-        r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean",
-        ["AUR_982_V_18-101 (text)", "AUR_977_X_101 (text)", "AUR_1051_II_08-101 (text)", "AUR_885_XI_2001 (text)"],
-        "train",
-        "valid",
-        "test"
-    )
     

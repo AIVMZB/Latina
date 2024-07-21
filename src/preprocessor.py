@@ -109,27 +109,3 @@ class Preprocessor:
                 if log:
                     print(f"{file} was proccessed")
 
-
-if __name__ == "__main__":
-    # kernel = ProcessKernel(invert_colors=False, denoise_intensity=3)
-
-    # preprocessor = Preprocessor(
-    #     input_path = "..\\datasets\\words\\train",
-    #     output_path = "..\\datasets\\words-preprocessed\\train",
-    #     kernel=kernel
-    # )
-
-    # preprocessor.execute(log=True)
-
-
-    # preprocessor = Preprocessor(
-    #     input_path = "..\\datasets\\words\\validation",
-    #     output_path = "..\\datasets\\words-preprocessed\\validation",
-    #     kernel=kernel
-    # )
-
-    # preprocessor.execute(log=True)
-
-    # kernel.save("kernel.pkl")
-    ...
-    

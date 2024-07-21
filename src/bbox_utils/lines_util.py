@@ -61,30 +61,3 @@ def model_results_to_obbs(results: np.ndarray) -> list[Obb]:
         )
     
     return obbs
-
-
-if __name__ == "__main__":
-    img_path = r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean\valid\AUR_831_VI_19-101 (text).jpg"
-    model_path = r"E:\Labs\year_3\Latina\LatinaProject\models\lines_obb_m_best.pt"
-    model = YOLO(model_path)
-
-    model_results = model.predict([img_path])[0].obb.xyxyxyxyn.to("cpu").numpy()
-    model_results = model_results_to_obbs(model_results)
-    extended = extend_lines_to_corners(model_results)
-
-    img = cv2.imread(img_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img1 = img.copy()
-    img2 = img.copy()
-
-    for obb in model_results:
-        img1 = plot_obb_on_image(img1, obb)
-    
-    for obb in extended:
-        img2 = plot_obb_on_image(img2, obb)
-    
-    plt.subplot(121)
-    plt.imshow(img1)
-    plt.subplot(122)
-    plt.imshow(img2)
-    plt.show()

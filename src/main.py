@@ -85,29 +85,3 @@ def predict_by_words_in_lines(image_path: str,
         
         word_results[0].plot(labels=True, probs=False, show=False, save=True, line_width=2,
                     filename=os.path.join("../predictions", f"{i}.jpg"))
-
-
-if __name__ == "__main__":
-    # Uncomment the line below to train to detect lines oriented bboxes
-    # train_detection_model(epochs=300, data_file="yamls/lines_obb_data.yaml", model_path='yolov8m-obb.pt',
-    #                       imgsz=LINE_DETECTION_IMG_SIZE)
-
-    
-    # Uncomment the line below to train to detect words bboxes
-    # train_detection_model(epochs=150, data_file="yamls/words_data.yaml", model_path="yolov8m.pt")
-
-    # TODO: try to copy files and train for more epochs
-    # train_detection_model(epochs=100, data_file="yamls/words_in_lines_data.yaml", model_path="yolov8m.pt", imgsz=700)
-
-    # predict_by_words_in_lines(r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean\valid\AUR_831_VI_19-101 (text).jpg", 
-    #                           LINES_OBB_BEST, 
-    #                           "../runs/detect/train12/weights/best.pt",
-    #                           min_confidence=0.1)
-    
-    # Uncomment the line below to test model on detecting words
-    inference(r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean\valid", 
-              "../runs/obb/train23/weights/best.pt", min_confidence=0.5)
-
-    # Uncomment the line below to test model on detecting lines
-    # inference("../datasets/lines-obb/valid/images", LINES_OBB_BEST, min_confidence=0.1, show=True)
-    ...
