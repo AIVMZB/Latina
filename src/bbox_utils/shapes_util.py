@@ -50,7 +50,6 @@ def to_obb(shape: Union[Bbox, Sequence]) -> Obb:
 
     Raises:
         TypeError: If the shape is neither a Bbox object nor a sequence of values.
-
     """
     if isinstance(shape, Bbox):
         return bbox_to_obb(shape)

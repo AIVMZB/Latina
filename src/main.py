@@ -18,6 +18,7 @@ TORCH_DEVICE = torch.device(dev)
 YOLO_DEVICE = [0] if dev == "cuda:0" else "cpu"   
 
 IMG_SIZE = 1024
+LINE_DETECTION_IMG_SIZE = 768
 YOLO_MODEL = os.path.join("..", "models", "yolov8n.pt")
 WORD_DETECT_BEST_MODEL = os.path.join("..", "models", "word_detect_best.pt")
 LINES_OBB_BEST = os.path.join("..", "models", "lines_obb_m_best.pt")
@@ -43,7 +44,7 @@ def inference(images_dir: str,
     
     model = YOLO(model_path).to(TORCH_DEVICE)
 
-    image_names = os.listdir(images_dir)
+    image_names = [image_name for image_name in os.listdir(images_dir) if image_name.endswith(".jpg")]
 
     images = list(map(lambda name: os.path.join(images_dir, name), image_names))
 
@@ -88,7 +89,8 @@ def predict_by_words_in_lines(image_path: str,
 
 if __name__ == "__main__":
     # Uncomment the line below to train to detect lines oriented bboxes
-    # train_detection_model(epochs=100, data_file="yamls/lines_obb_data.yaml", model_path=LINES_OBB_BEST)
+    # train_detection_model(epochs=300, data_file="yamls/lines_obb_data.yaml", model_path='yolov8m-obb.pt',
+    #                       imgsz=LINE_DETECTION_IMG_SIZE)
 
     
     # Uncomment the line below to train to detect words bboxes
@@ -97,13 +99,14 @@ if __name__ == "__main__":
     # TODO: try to copy files and train for more epochs
     # train_detection_model(epochs=100, data_file="yamls/words_in_lines_data.yaml", model_path="yolov8m.pt", imgsz=700)
 
-    predict_by_words_in_lines(r"E:\Labs\year_3\Latina\LatinaProject\images\AUR_909_II_19-101 (text).jpg", 
+    predict_by_words_in_lines(r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean\valid\AUR_831_VI_19-101 (text).jpg", 
                               LINES_OBB_BEST, 
                               "../runs/detect/train12/weights/best.pt",
                               min_confidence=0.1)
     
     # Uncomment the line below to test model on detecting words
-    # inference("../images", LINES_OBB_BEST, min_confidence=0.1)
+    # inference(r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean\valid", 
+    #           "../runs/obb/train23/weights/best.pt", min_confidence=0.5)
 
     # Uncomment the line below to test model on detecting lines
     # inference("../datasets/lines-obb/valid/images", LINES_OBB_BEST, min_confidence=0.1, show=True)

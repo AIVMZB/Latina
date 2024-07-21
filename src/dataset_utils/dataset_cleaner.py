@@ -8,7 +8,7 @@ class DetectObject(NamedTuple):
     bbox_data: list
 
 
-def clear_dataset(
+def clear_dataset_from_classes(
         dataset_path: str,
         new_dataset_path: str, 
         classes_to_remove: tuple,
@@ -22,14 +22,14 @@ def clear_dataset(
     
     os.mkdir(new_dataset_path)
 
-    clear_folder(os.path.join(dataset_path, train_dir), os.path.join(new_dataset_path, train_dir), classes_to_remove)
-    clear_folder(os.path.join(dataset_path, validation_dir), os.path.join(new_dataset_path, validation_dir), classes_to_remove)
+    clear_folder_from_classes(os.path.join(dataset_path, train_dir), os.path.join(new_dataset_path, train_dir), classes_to_remove)
+    clear_folder_from_classes(os.path.join(dataset_path, validation_dir), os.path.join(new_dataset_path, validation_dir), classes_to_remove)
     
     if test_dir:
-        clear_folder(os.path.join(dataset_path, test_dir), os.path.join(new_dataset_path, test_dir), classes_to_remove)
+        clear_folder_from_classes(os.path.join(dataset_path, test_dir), os.path.join(new_dataset_path, test_dir), classes_to_remove)
     
 
-def clear_folder(folder_path: str, new_folder_class: str, classes_to_remove: tuple) -> None:
+def clear_folder_from_classes(folder_path: str, new_folder_class: str, classes_to_remove: tuple) -> None:
     if not os.path.exists(folder_path):
         raise FileNotFoundError(f"Folder not found in {folder_path}")
     
@@ -79,3 +79,59 @@ def objects_to_file(filepath: str, detect_objects: list[DetectObject]) -> None:
                     f.write(f"{detect_object.bbox_data[i]}")
             
             f.write('\n')
+
+
+def clear_dataset_from_outliers(
+        dataset_folder: str,
+        new_dataset_path: str,
+        outlier_files: list,
+        train_dir: str, 
+        validation_dir: str, 
+        test_dir: Optional[str] = None
+    ) -> None:
+    if not os.path.exists(new_dataset_path):
+        os.mkdir(new_dataset_path)
+
+    clear_dir_from_outliers(
+        os.path.join(dataset_folder, train_dir),
+        os.path.join(new_dataset_path, train_dir),
+        outlier_files
+    )
+    clear_dir_from_outliers(
+        os.path.join(dataset_folder, validation_dir),
+        os.path.join(new_dataset_path, validation_dir),
+        outlier_files
+    )
+    if test_dir is not None:
+        clear_dir_from_outliers(
+            os.path.join(dataset_folder, test_dir),
+            os.path.join(new_dataset_path, test_dir),
+            outlier_files
+        )
+        
+
+def clear_dir_from_outliers(dir: str, new_dir: str, outliers: list):
+    if not os.path.exists(new_dir):
+        os.mkdir(new_dir)
+
+    for filename in os.listdir(dir):
+        if filename.split('.')[0] not in outliers:
+            shutil.copyfile(
+                os.path.join(dir, filename),
+                os.path.join(new_dir, filename)
+            )
+            print(f"Copying {os.path.join(dir, filename)}")
+        else:
+            print(f"Ignoring {os.path.join(dir, filename)}")
+
+
+if __name__ == "__main__":
+    clear_dataset_from_outliers(
+        r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb",
+        r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean",
+        ["AUR_982_V_18-101 (text)", "AUR_977_X_101 (text)", "AUR_1051_II_08-101 (text)", "AUR_885_XI_2001 (text)"],
+        "train",
+        "valid",
+        "test"
+    )
+    
