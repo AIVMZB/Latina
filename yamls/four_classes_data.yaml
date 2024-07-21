@@ -1,0 +1,10 @@
+path: ..\datasets\four-classes
+
+train: train
+val: validation
+
+names:
+  0: drawing
+  1: heading
+  2: initials
+  3: stamp
