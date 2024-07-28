@@ -17,3 +17,4 @@ or run `pip3 install torch torchvision torchaudio --index-url https://download.p
 8) Download the [datasets](https://drive.google.com/file/d/1Uw4uyqgTVrOy2VdOgZIdBIwMiTCDGNMj/view?usp=drive_link) 
 and unpack it to project root folder
 
+[Link](https://drive.google.com/drive/folders/1rDiNWzTFDnUGerJdcM-tIONm1AEr_n0h?usp=sharing) for raw data.
