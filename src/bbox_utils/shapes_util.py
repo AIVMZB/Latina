@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
-from typing import NamedTuple, Union, Sequence
+from typing import NamedTuple, Union, Sequence, List, Dict
 from prettyprinter import pprint
 
 
@@ -116,7 +116,7 @@ def obb_to_image_coords(width: int, height: int, obb: Obb) -> Obb:
     return to_obb(image_obb)
 
 
-def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> Obb:
+def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> int:
     """Counts intersection of lines with the specified word and picks a line with the highest intersection area"""
 
     best_intersection = 0
@@ -130,8 +130,40 @@ def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> Obb:
     return best_line_index
 
 
+def sort_lines_vertically(lines: list[Obb]) -> List[int]:
+    """
+    Sorts line indices based on the vertical position (y1, y2, y3, y4) of their bounding boxes.
+
+    Args:
+        lines (list[Obb]): The list of line oriented bounding boxes to sort.
+
+    Returns:
+        List[int]: The sorted list of line indices.
+    """
+    sorted_indices = sorted(range(len(lines)), key=lambda i: min(lines[i].y1, lines[i].y2, lines[i].y3, lines[i].y4))
+
+    return sorted_indices
+
+
+def sort_words_within_lines(word_indices: List[int], words: List[Bbox]) -> List[int]:
+    """
+    Sorts word indices based on the horizontal position (cx) of their bounding boxes.
+
+    Args:
+        word_indices (List[int]): The list of word indices to sort.
+        words (List[Bbox]): The list of word bounding boxes.
+
+    Returns:
+        List[int]: The sorted list of word indices.
+    """
+    sorted_indices = sorted(word_indices, key=lambda idx: words[idx].cx)
+
+    return sorted_indices
+
+
 def find_words_in_line(line_obb: Obb, word_bboxes: list[Bbox], 
                        width: int, height: int, 
+                       used_words: set,
                        thresh: float = 0.5) -> list:
     """
     Finds the indexes of words that intersect with a given line.
@@ -141,19 +173,20 @@ def find_words_in_line(line_obb: Obb, word_bboxes: list[Bbox],
         word_bboxes (list[Bbox]): The bounding boxes of the words.
         width (int): The width of the image.
         height (int): The height of the image.
+        used_words (set): The set of already used words
         thresh (float, optional): The threshold for intersection area. Defaults to 0.5.
 
     Returns:
         list: The indexes of the intersected words.
     """
-    
+
     intersected_words_indexes = []
     line_obb = obb_to_image_coords(width, height, line_obb)
     for i, word_bbox in enumerate(word_bboxes):
         word_obb = bbox_to_obb(word_bbox)
         word_obb = obb_to_image_coords(width, height, word_obb)
         
-        if intersection_area(line_obb, word_obb) / obb_to_polygon(word_obb).area > thresh:
+        if intersection_area(line_obb, word_obb) / obb_to_polygon(word_obb).area > thresh and i not in used_words:
             intersected_words_indexes.append(i)
 
     return intersected_words_indexes
@@ -207,9 +240,15 @@ def map_words_to_lines(words: list[Bbox], lines: list[Obb], image: np.ndarray) -
         dict: A dictionary mapping line indices to word indices.
     """
     line_to_words = {}
+    used_words = set()
     count = 0
-    for i, line in enumerate(lines):
-        line_to_words[i] = find_words_in_line(line, words, image.shape[1], image.shape[0])
+    
+    sorted_lines_indices = sort_lines_vertically(lines)
+    
+    for i in sorted_lines_indices:
+        line = lines[i]
+        line_to_words[i] = find_words_in_line(line, words, image.shape[1], image.shape[0], used_words)
+        used_words = used_words.union(set(line_to_words[i]))
         count += len(line_to_words[i])
     
     if count == len(words):
@@ -226,13 +265,36 @@ def map_words_to_lines(words: list[Bbox], lines: list[Obb], image: np.ndarray) -
     return line_to_words
 
 
+def sort_words_by_lines(line_to_words: Dict[int, List[int]], words: List[Bbox]) -> Dict[int, List[int]]:
+    sorted_line_to_words = {}
+    
+    for line_index, word_indices in line_to_words.items():
+        sorted_indices = sort_words_within_lines(word_indices, words)
+        sorted_line_to_words[line_index] = sorted_indices
+    
+    return sorted_line_to_words
+
+
 if __name__ == "__main__":
-    lines = read_shapes("..\datasets\lines-obb\\test\labels\AUR_945_VI_4-101-text-_jpg.rf.f05201b45f7215a2eb52c9750eed34e6.txt",
+    lines = read_shapes(r"D:\GitHub\Latina\datasets\lines-obb-clean\train\AUR_816_II_5-101 (text).txt",
                         transform_func=to_obb)
-    words = read_shapes("..\datasets\words\\train\AUR_945_VI_4-101 (text).txt",
+    words = read_shapes(r"D:\GitHub\Latina\datasets\archive\words\train\AUR_816_II_5-101 (text).txt",
                         transform_func=to_bbox)
 
-    image = cv2.imread("../datasets/lines-obb/test/images/AUR_945_VI_4-101-text-_jpg.rf.f05201b45f7215a2eb52c9750eed34e6.jpg")
-
+    image = cv2.imread(r"D:\GitHub\Latina\datasets\archive\words\train\AUR_816_II_5-101 (text).jpg")
+    
     line_to_words = map_words_to_lines(words, lines, image)
-    pprint(line_to_words)
+    
+    sorted_line_to_words = sort_words_by_lines(line_to_words, words)
+
+    word = words[238]
+    line_1 = lines[0]
+    line_2 = lines[12]
+    image = plot_obb_on_image(image, to_obb(word))
+    image = plot_obb_on_image(image, line_1)
+    image = plot_obb_on_image(image, line_2)
+    
+    plt.imshow(image)
+    plt.show()
+
+    pprint(sorted_line_to_words)
