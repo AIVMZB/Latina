@@ -1,4 +1,8 @@
 from preprocessing.preprocessor import ImagePreprocessor
+from bbox_utils.shapes_util import Obb
+from bbox_utils.word_to_lines import crop_line_from_image
+from bbox_utils.lines_util import extend_line_to_corners
+
 from ultralytics import YOLO
 from typing import Union
 import numpy as np
@@ -10,7 +14,7 @@ import os
 # TODO: Write docstrings
 
 class YoloWrapper:
-    TRAIN_KWARGS = dict(batch=1, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, 
+    TRAIN_KWARGS = dict(batch=2, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, 
                         translate=0.1, scale=0.1, fliplr=0.0, mosaic=0.0, erasing=0.0, crop_fraction=0.1)
 
     def __init__(
@@ -57,3 +61,35 @@ class YoloWrapper:
     def model(self, weiths: str):
         self._model = YOLO(weiths).to(self._device)
     
+
+class LineWordPipeline:
+    def __init__(self, line_detection_model: str, word_detection_model: str, device: str):
+        self._device = torch.device(device)
+        self._line_model = YOLO(line_detection_model).to(self._device)
+        self._word_model = YOLO(word_detection_model).to(self._device)
+
+    def predict_on_image(self, image_path: str, output_path: str, 
+                         plot_lines: bool = False,
+                         line_conf: float = 0.5, word_conf: float = 0.4):
+        os.makedirs(output_path, exist_ok=True)
+
+        line_results = self._line_model.predict([image_path], conf=line_conf)
+        if plot_lines:
+            line_results[0].plot(labels=True, probs=False, show=True, save=True, line_width=2)
+            
+        lines = line_results[0].obb.xyxyxyxyn.to("cpu").numpy()
+        image = cv2.imread(image_path)
+        for i in range(lines.shape[0]):
+            line = lines[i]
+            line = Obb(line[0, 0], line[0, 1], line[1, 0], line[1, 1], line[2, 0], line[2, 1], line[3, 0], line[3, 1])
+            line = extend_line_to_corners(line)
+            line_image = crop_line_from_image(image, line)
+
+            if line_image.size == 0:
+                print("[WARNING] Failed to crop line")
+                continue
+
+            word_results = self._word_model.predict([line_image], conf=word_conf)
+            
+            word_results[0].plot(labels=True, probs=False, show=False, save=True, line_width=2,
+                        filename=os.path.join("../predictions", f"{i}.jpg"))

@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
-from typing import NamedTuple, Union, Sequence
+from typing import NamedTuple, Union, Sequence, Optional
 from prettyprinter import pprint
 
 
@@ -57,13 +57,13 @@ def to_obb(shape: Union[Bbox, Sequence]) -> Obb:
         return Obb(*shape)
 
 
-def read_shapes(filename: str, transform_func: callable, class_num: str = "0") -> Union[list[Bbox], list[Obb]]:
+def read_shapes(filename: str, transform_func: callable, class_ids: list = ["0"]) -> Union[list[Bbox], list[Obb]]:
     """
     Reads shapes from a file and transforms them using a given function.
 
     Args:
         filename (str): The name of the file to read.
-        class_num (str, optional): The class number to filter the shapes. Defaults to "0".
+        class_ids (list, optional): The class ids to filter shapes. Defaults to ["0"].
         transform_func (callable, optional): The function to transform the shapes. Defaults to to_bbox.
 
     Returns:
@@ -73,7 +73,7 @@ def read_shapes(filename: str, transform_func: callable, class_num: str = "0") -
     with open(filename, 'r') as file:
         for line in file:
             values = line.split(" ")
-            if values[0] != class_num:
+            if values[0] not in class_ids:
                 continue
             shapes.append(
                 transform_func(list(map(float, values[1:])))
@@ -116,7 +116,13 @@ def obb_to_image_coords(width: int, height: int, obb: Obb) -> Obb:
     return to_obb(image_obb)
 
 
-def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> Obb:
+def obb_center(obb: Obb) -> tuple[float, float]:
+    cx = (obb.x1 + obb.x2 + obb.x3 + obb.x4) / 4
+    cy = (obb.y1 + obb.y2 + obb.y3 + obb.y4) / 4
+    return cx, cy
+
+
+def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> Optional[int]:
     """Counts intersection of lines with the specified word and picks a line with the highest intersection area"""
 
     best_intersection = 0
@@ -126,7 +132,7 @@ def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> Obb:
         if intersection > best_intersection:
             best_intersection = intersection
             best_line_index = i
-            
+
     return best_line_index
 
 
@@ -220,19 +226,26 @@ def map_words_to_lines(words: list[Bbox], lines: list[Obb], image: np.ndarray) -
             continue
         
         line_index = find_line_for_word(to_obb(word), lines)
-
-        line_to_words[line_index].append(i)
+        if line_index is not None:
+            line_to_words[line_index].append(i)
 
     return line_to_words
 
 
 if __name__ == "__main__":
-    lines = read_shapes("..\datasets\lines-obb\\test\labels\AUR_945_VI_4-101-text-_jpg.rf.f05201b45f7215a2eb52c9750eed34e6.txt",
-                        transform_func=to_obb)
-    words = read_shapes("..\datasets\words\\train\AUR_945_VI_4-101 (text).txt",
-                        transform_func=to_bbox)
+    import os
 
-    image = cv2.imread("../datasets/lines-obb/test/images/AUR_945_VI_4-101-text-_jpg.rf.f05201b45f7215a2eb52c9750eed34e6.jpg")
+    folder = r"E:\Labs\year_3\Latina\LatinaProject\datasets\words-in-lines\validation"
+    for file in os.listdir(folder):
+        if not file.endswith(".txt"):
+            continue
 
-    line_to_words = map_words_to_lines(words, lines, image)
-    pprint(line_to_words)
+        name = file.split(".")[0]
+        words = read_shapes(os.path.join(folder, file), to_bbox)
+        words = list(map(to_obb, words))
+        image = cv2.imread(os.path.join(folder, name + ".jpg"))
+        for word in words:
+            image = plot_obb_on_image(image, word)
+        
+        plt.imshow(image)
+        plt.show()

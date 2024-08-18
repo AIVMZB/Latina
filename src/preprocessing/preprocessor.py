@@ -5,14 +5,6 @@ import cv2
 from abc import ABC, abstractmethod
 
 
-def _extract_features(image: np.ndarray) -> np.ndarray:
-    sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3)
-    sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)
-    features = np.sqrt(sobelx ** 2 + sobely ** 2)
-
-    return features
-
-
 class PreprocessStep(ABC):
     @abstractmethod
     def __call__(self, image: np.ndarray) -> np.ndarray:
@@ -28,8 +20,16 @@ class Identity(PreprocessStep):
 
 
 class TextureRemove(PreprocessStep):
+    @staticmethod
+    def _extract_features(image: np.ndarray) -> np.ndarray:
+        sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3)
+        sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)
+        features = np.sqrt(sobelx ** 2 + sobely ** 2)
+
+        return features
+
     def __call__(self, image: np.ndarray) -> np.ndarray:
-        return image - _extract_features(image)
+        return image - self._extract_features(image)
 
 
 class GrayScale(PreprocessStep):
