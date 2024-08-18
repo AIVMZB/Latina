@@ -1,4 +1,4 @@
-from shapes_util import Obb, read_shapes, to_obb, plot_obb_on_image
+from .shapes_util import Obb, read_shapes, to_obb, plot_obb_on_image
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
