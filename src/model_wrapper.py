@@ -17,8 +17,8 @@ class YoloWrapper:
             self, 
             model_path: str, 
             device: Union[torch.device, str],
-            preprocessor: Union[ImagePreprocessor, str]
-            ):
+            preprocessor: Union[ImagePreprocessor, str, None] = None
+        ):
         if isinstance(device, torch.device):
             self._device = device
         elif isinstance(device, str):
@@ -31,11 +31,11 @@ class YoloWrapper:
         elif isinstance(preprocessor, str):
             assert os.path.exists(preprocessor), "Provide preprocessor object or its valid path"
             self._preprocessor = ImagePreprocessor.load(preprocessor)
-
+        else:
+            self._preprocessor = ImagePreprocessor()
 
     def train(self, data_file: str, epochs: int, img_size: int) -> None:
         self._model.train(data=data_file, epochs=epochs, imgsz=img_size, device=self._device, **YoloWrapper.TRAIN_KWARGS)
-
 
     def inference_image(self, image_path: str, prediction_dir: str, min_conf: float = 0.5, show_plot: bool = True):
         image = cv2.imread(image_path)
@@ -49,11 +49,9 @@ class YoloWrapper:
         result.plot(labels=True, probs=False, show=show_plot, save=True, line_width=2,
                     filename=os.path.join(prediction_dir, os.path.basename(image_path)))
 
-
     @property
     def model(self) -> YOLO:
         return self._model
-
 
     @model.setter
     def model(self, weiths: str):

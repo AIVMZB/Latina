@@ -1,5 +1,5 @@
 import os
-from preprocessor import ImagePreprocessor
+from preprocessing.preprocessor import ImagePreprocessor
 import shutil
 import cv2
 

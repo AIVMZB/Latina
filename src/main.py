@@ -6,7 +6,6 @@ from bbox_utils.lines_util import extend_line_to_corners
 from bbox_utils.shapes_util import Obb
 import cv2
 from model_wrapper import YoloWrapper
-from preprocessing.preprocessor import ImagePreprocessor
 
 
 if torch.cuda.is_available():
@@ -57,6 +56,5 @@ def predict_by_words_in_lines(image_path: str,
 
 
 if __name__ == "__main__":
-    preprocessor = ImagePreprocessor.load(r"..\preprocessors\gray-untextured.pkl")
-    model = YoloWrapper("yolov8l.pt", TORCH_DEVICE, preprocessor)
-    model.train(r"..\yamls\five_classes_data.yaml", epochs=300, img_size=IMG_SIZE)
+    model = YoloWrapper(WORD_DETECT_BEST_MODEL, TORCH_DEVICE, r"saved_preprocessors\gray-untextured")
+    model.inference_image(r"..\images\AUR_816_II_5-101 (text).jpg", "..\predictions", min_conf=0.2, show_plot=False)
