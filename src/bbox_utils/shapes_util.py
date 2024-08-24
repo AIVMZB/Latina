@@ -131,7 +131,7 @@ def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> int:
         if intersection > best_intersection:
             best_intersection = intersection
             best_line_index = i
-            
+
     return best_line_index
 
 
@@ -264,8 +264,8 @@ def map_words_to_lines(words: list[Bbox], lines: list[Obb], image: np.ndarray) -
             continue
         
         line_index = find_line_for_word(to_obb(word), lines)
-
-        line_to_words[line_index].append(i)
+        if line_index is not None:
+            line_to_words[line_index].append(i)
 
     return line_to_words
 

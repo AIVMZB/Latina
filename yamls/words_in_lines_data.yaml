@@ -1,4 +1,4 @@
-path: ..\datasets\words-in-lines-splitted
+path: ..\datasets\words-in-lines
 
 train: .\train
 val: .\validation
