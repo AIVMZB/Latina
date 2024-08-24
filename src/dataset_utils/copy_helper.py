@@ -14,10 +14,3 @@ def copy_images_to_dir(dir_path: str, images_path: str):
         if filename.endswith(".txt"):
             image_path = os.path.join(images_path, filename.split(".")[0] + ".jpg")
             shutil.copy(image_path, dir_path)
-
-
-if __name__ == "__main__":
-    copy_images_to_dataset(
-        r"E:\Labs\year_3\Latina\LatinaProject\datasets\seven-classes",
-        r"E:\Labs\year_3\Latina\LatinaProject\images"
-    )
