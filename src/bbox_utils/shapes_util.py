@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
-from typing import NamedTuple, Union, Sequence, Optional
+from typing import NamedTuple, Union, Sequence, List, Dict, Set, Callable
 from prettyprinter import pprint
 
 
@@ -57,23 +57,28 @@ def to_obb(shape: Union[Bbox, Sequence]) -> Obb:
         return Obb(*shape)
 
 
-def read_shapes(filename: str, transform_func: callable, class_ids: list = ["0"]) -> Union[list[Bbox], list[Obb]]:
+def read_shapes(filename: str, transform_func: Callable[[List[float]], Union[Bbox, Obb]], class_nums: Union[str, List[str], Set[str]]) -> Union[List[Bbox], List[Obb]]:
     """
     Reads shapes from a file and transforms them using a given function.
 
     Args:
         filename (str): The name of the file to read.
-        class_ids (list, optional): The class ids to filter shapes. Defaults to ["0"].
-        transform_func (callable, optional): The function to transform the shapes. Defaults to to_bbox.
+        class_nums (Union[str, List[str], Set[str]]): The class numbers to filter the shapes. Can be a single value or a list/set of values.
+        transform_func (Callable[[List[float]], Union[Bbox, Obb]]): The function to transform the shapes. Defaults to to_bbox.
 
     Returns:
-        Union[list[Bbox], list[Obb]]: A list of readed shapes.
+        Union[List[Bbox], List[Obb]]: A list of readed shapes.
     """
+    if isinstance(class_nums, str):
+        class_nums = {class_nums}
+    elif isinstance(class_nums, list):
+        class_nums = set(class_nums)
+    
     shapes = []
     with open(filename, 'r') as file:
         for line in file:
-            values = line.split(" ")
-            if values[0] not in class_ids:
+            values = line.split()
+            if values[0] not in class_nums:
                 continue
             shapes.append(
                 transform_func(list(map(float, values[1:])))
@@ -116,13 +121,7 @@ def obb_to_image_coords(width: int, height: int, obb: Obb) -> Obb:
     return to_obb(image_obb)
 
 
-def obb_center(obb: Obb) -> tuple[float, float]:
-    cx = (obb.x1 + obb.x2 + obb.x3 + obb.x4) / 4
-    cy = (obb.y1 + obb.y2 + obb.y3 + obb.y4) / 4
-    return cx, cy
-
-
-def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> Optional[int]:
+def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> int:
     """Counts intersection of lines with the specified word and picks a line with the highest intersection area"""
 
     best_intersection = 0
@@ -136,8 +135,40 @@ def find_line_for_word(word_obb: Obb, line_bboxes: list[Obb]) -> Optional[int]:
     return best_line_index
 
 
+def sort_lines_vertically(lines: list[Obb]) -> List[int]:
+    """
+    Sorts line indices based on the vertical position (y1, y2, y3, y4) of their bounding boxes.
+
+    Args:
+        lines (list[Obb]): The list of line oriented bounding boxes to sort.
+
+    Returns:
+        List[int]: The sorted list of line indices.
+    """
+    sorted_indices = sorted(range(len(lines)), key=lambda i: min(lines[i].y1, lines[i].y2, lines[i].y3, lines[i].y4))
+
+    return sorted_indices
+
+
+def sort_words_within_lines(word_indices: List[int], words: List[Bbox]) -> List[int]:
+    """
+    Sorts word indices based on the horizontal position (cx) of their bounding boxes.
+
+    Args:
+        word_indices (List[int]): The list of word indices to sort.
+        words (List[Bbox]): The list of word bounding boxes.
+
+    Returns:
+        List[int]: The sorted list of word indices.
+    """
+    sorted_indices = sorted(word_indices, key=lambda idx: words[idx].cx)
+
+    return sorted_indices
+
+
 def find_words_in_line(line_obb: Obb, word_bboxes: list[Bbox], 
                        width: int, height: int, 
+                       used_words: set,
                        thresh: float = 0.5) -> list:
     """
     Finds the indexes of words that intersect with a given line.
@@ -147,19 +178,20 @@ def find_words_in_line(line_obb: Obb, word_bboxes: list[Bbox],
         word_bboxes (list[Bbox]): The bounding boxes of the words.
         width (int): The width of the image.
         height (int): The height of the image.
+        used_words (set): The set of already used words
         thresh (float, optional): The threshold for intersection area. Defaults to 0.5.
 
     Returns:
         list: The indexes of the intersected words.
     """
-    
+
     intersected_words_indexes = []
     line_obb = obb_to_image_coords(width, height, line_obb)
     for i, word_bbox in enumerate(word_bboxes):
         word_obb = bbox_to_obb(word_bbox)
         word_obb = obb_to_image_coords(width, height, word_obb)
         
-        if intersection_area(line_obb, word_obb) / obb_to_polygon(word_obb).area > thresh:
+        if intersection_area(line_obb, word_obb) / obb_to_polygon(word_obb).area > thresh and i not in used_words:
             intersected_words_indexes.append(i)
 
     return intersected_words_indexes
@@ -213,9 +245,15 @@ def map_words_to_lines(words: list[Bbox], lines: list[Obb], image: np.ndarray) -
         dict: A dictionary mapping line indices to word indices.
     """
     line_to_words = {}
+    used_words = set()
     count = 0
-    for i, line in enumerate(lines):
-        line_to_words[i] = find_words_in_line(line, words, image.shape[1], image.shape[0])
+    
+    sorted_lines_indices = sort_lines_vertically(lines)
+    
+    for i in sorted_lines_indices:
+        line = lines[i]
+        line_to_words[i] = find_words_in_line(line, words, image.shape[1], image.shape[0], used_words)
+        used_words = used_words.union(set(line_to_words[i]))
         count += len(line_to_words[i])
     
     if count == len(words):
@@ -232,20 +270,34 @@ def map_words_to_lines(words: list[Bbox], lines: list[Obb], image: np.ndarray) -
     return line_to_words
 
 
+def sort_words_by_lines(line_to_words: Dict[int, List[int]], words: List[Bbox]) -> Dict[int, List[int]]:
+    sorted_line_to_words = {}
+    
+    for line_index, word_indices in line_to_words.items():
+        sorted_indices = sort_words_within_lines(word_indices, words)
+        sorted_line_to_words[line_index] = sorted_indices
+    
+    return sorted_line_to_words
+
+
 if __name__ == "__main__":
-    import os
+    lines = read_shapes(r"D:\GitHub\Latina\datasets\datasets\lines-obb-clean\train\AUR_891_III_9-101 (text).txt",
+                        transform_func=to_obb, class_nums="0")
+    words = read_shapes(r"D:\GitHub\Latina\datasets\datasets\seven-classes\train\AUR_891_III_9-101 (text).txt",
+                        transform_func=to_bbox, class_nums=["1", "2", "3", "6"])
 
-    folder = r"E:\Labs\year_3\Latina\LatinaProject\datasets\words-in-lines\validation"
-    for file in os.listdir(folder):
-        if not file.endswith(".txt"):
-            continue
+    image = cv2.imread(r"D:\GitHub\Latina\datasets\datasets\seven-classes\train\AUR_891_III_9-101 (text).jpg")
+    line_to_words = map_words_to_lines(words, lines, image)
+    
+    sorted_line_to_words = sort_words_by_lines(line_to_words, words)
+    
+    word = words[337]
+    line_1 = lines[0]
+   
+    image = plot_obb_on_image(image, to_obb(word))
+    image = plot_obb_on_image(image, line_1)
+    
+    plt.imshow(image)
+    plt.show()
 
-        name = file.split(".")[0]
-        words = read_shapes(os.path.join(folder, file), to_bbox)
-        words = list(map(to_obb, words))
-        image = cv2.imread(os.path.join(folder, name + ".jpg"))
-        for word in words:
-            image = plot_obb_on_image(image, word)
-        
-        plt.imshow(image)
-        plt.show()
+    pprint(sorted_line_to_words)
