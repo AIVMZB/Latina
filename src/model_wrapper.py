@@ -5,7 +5,6 @@ from bbox_utils.lines_util import extend_line_to_corners
 
 from ultralytics import YOLO
 from typing import Union
-import numpy as np
 import cv2
 import torch
 import os
@@ -86,10 +85,10 @@ class LineWordPipeline:
             line_image = crop_line_from_image(image, line)
 
             if line_image.size == 0:
-                print("[WARNING] Failed to crop line")
+                print("[WARNING] Failed to crop line. Its size is zero!")
                 continue
 
             word_results = self._word_model.predict([line_image], conf=word_conf)
             
             word_results[0].plot(labels=True, probs=False, show=False, save=True, line_width=2,
-                        filename=os.path.join("../predictions", f"{i}.jpg"))
+                        filename=os.path.join(output_path, f"{i}.jpg"))

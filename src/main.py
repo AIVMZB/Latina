@@ -8,6 +8,9 @@ LINE_DETECTION_IMG_SIZE = 768
 WORD_DETECT_BEST_MODEL = os.path.join("..", "models", "word_detect_m_best.pt")
 LINES_OBB_BEST = os.path.join("..", "models", "lines_obb_m_best.pt")
 
+# TODO:
+# 1) Try training with image preparation
+# 2) Deal with intersecting words and lines
 
 if __name__ == "__main__":
     image_path = input("Input image path here\n>>> ")
@@ -21,4 +24,4 @@ if __name__ == "__main__":
     )
 
     print("The results are saved in '../predictions' folder")
-    
+
