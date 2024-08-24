@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
-from typing import NamedTuple, Union, Sequence, List, Dict
+from typing import NamedTuple, Union, Sequence, List, Dict, Set, Callable
 from prettyprinter import pprint
 
 
@@ -57,23 +57,28 @@ def to_obb(shape: Union[Bbox, Sequence]) -> Obb:
         return Obb(*shape)
 
 
-def read_shapes(filename: str, transform_func: callable, class_num: str = "0") -> Union[list[Bbox], list[Obb]]:
+def read_shapes(filename: str, transform_func: Callable[[List[float]], Union[Bbox, Obb]], class_nums: Union[str, List[str], Set[str]]) -> Union[List[Bbox], List[Obb]]:
     """
     Reads shapes from a file and transforms them using a given function.
 
     Args:
         filename (str): The name of the file to read.
-        class_num (str, optional): The class number to filter the shapes. Defaults to "0".
-        transform_func (callable, optional): The function to transform the shapes. Defaults to to_bbox.
+        class_nums (Union[str, List[str], Set[str]]): The class numbers to filter the shapes. Can be a single value or a list/set of values.
+        transform_func (Callable[[List[float]], Union[Bbox, Obb]]): The function to transform the shapes. Defaults to to_bbox.
 
     Returns:
-        Union[list[Bbox], list[Obb]]: A list of readed shapes.
+        Union[List[Bbox], List[Obb]]: A list of readed shapes.
     """
+    if isinstance(class_nums, str):
+        class_nums = {class_nums}
+    elif isinstance(class_nums, list):
+        class_nums = set(class_nums)
+    
     shapes = []
     with open(filename, 'r') as file:
         for line in file:
-            values = line.split(" ")
-            if values[0] != class_num:
+            values = line.split()
+            if values[0] not in class_nums:
                 continue
             shapes.append(
                 transform_func(list(map(float, values[1:])))
@@ -276,23 +281,21 @@ def sort_words_by_lines(line_to_words: Dict[int, List[int]], words: List[Bbox]) 
 
 
 if __name__ == "__main__":
-    lines = read_shapes(r"D:\GitHub\Latina\datasets\lines-obb-clean\train\AUR_816_II_5-101 (text).txt",
-                        transform_func=to_obb)
-    words = read_shapes(r"D:\GitHub\Latina\datasets\archive\words\train\AUR_816_II_5-101 (text).txt",
-                        transform_func=to_bbox)
+    lines = read_shapes(r"D:\GitHub\Latina\datasets\datasets\lines-obb-clean\train\AUR_891_III_9-101 (text).txt",
+                        transform_func=to_obb, class_nums="0")
+    words = read_shapes(r"D:\GitHub\Latina\datasets\datasets\seven-classes\train\AUR_891_III_9-101 (text).txt",
+                        transform_func=to_bbox, class_nums=["1", "2", "3", "6"])
 
-    image = cv2.imread(r"D:\GitHub\Latina\datasets\archive\words\train\AUR_816_II_5-101 (text).jpg")
-    
+    image = cv2.imread(r"D:\GitHub\Latina\datasets\datasets\seven-classes\train\AUR_891_III_9-101 (text).jpg")
     line_to_words = map_words_to_lines(words, lines, image)
     
     sorted_line_to_words = sort_words_by_lines(line_to_words, words)
-
-    word = words[238]
+    
+    word = words[337]
     line_1 = lines[0]
-    line_2 = lines[12]
+   
     image = plot_obb_on_image(image, to_obb(word))
     image = plot_obb_on_image(image, line_1)
-    image = plot_obb_on_image(image, line_2)
     
     plt.imshow(image)
     plt.show()
