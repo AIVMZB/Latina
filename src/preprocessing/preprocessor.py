@@ -38,6 +38,15 @@ class GrayScale(PreprocessStep):
         return cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
 
+class EdgeDetection(PreprocessStep):
+    def __init__(self, t_lower: int = 50, t_upper: int = 100):
+        self.t_lower = t_lower
+        self.t_upper = t_upper
+
+    def __call__(self, image: np.ndarray) -> np.ndarray:
+        return cv2.Canny(image, self.t_lower, self.t_upper)
+        
+
 class ImagePreprocessor:
     def __init__(self, name: str = "", methods: list = [Identity()]) -> None:
         """
@@ -90,3 +99,18 @@ class ImagePreprocessor:
         object_data += " -> ".join(str(method) for method in self._methods) + " )"
         return object_data
     
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    img_path = r"E:\Labs\year_3\Latina\LatinaProject\images\AUR_996_V_28-101 (text).jpg"
+    img = cv2.imread(img_path)
+
+    preprocessor = ImagePreprocessor("edge-detection", [EdgeDetection()])
+    img = preprocessor.process(img)
+
+    print(img.min(), img.max())
+    plt.imshow(img)
+    plt.show()
+
+    preprocessor.save("saved_preprocessors")
