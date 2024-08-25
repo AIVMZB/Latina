@@ -1,5 +1,5 @@
 import os
-from preprocessing.preprocessor import ImagePreprocessor
+from preprocessor import ImagePreprocessor, EdgeDetection
 import shutil
 import cv2
 
@@ -14,7 +14,11 @@ def preprocess_folder(base_dir: str, new_dir: str, preprocessor: ImagePreprocess
         else:
             img = cv2.imread(os.path.join(base_dir, filename))
             img = preprocessor.process(img)
-            cv2.imwrite(os.path.join(new_dir, filename), img)
+            try:
+                cv2.imwrite(os.path.join(new_dir, filename), img)
+            except Exception as e:
+                print(f"[ERROR] Failed to save {os.path.join(new_dir, filename)}. Error message: ")
+                print(e)
 
 
 def create_preprocessed_dataset(preprocessor: ImagePreprocessor, base_dataset_path: str, new_dataset_path: str) -> None:
@@ -30,3 +34,10 @@ def create_preprocessed_dataset(preprocessor: ImagePreprocessor, base_dataset_pa
     for subdir in base_subdirs:
         new_dir = os.path.join(new_dataset_path, subdir.name)
         preprocess_folder(subdir, new_dir, preprocessor)
+
+
+if __name__ == "__main__":
+    preprocessor = ImagePreprocessor("edge-detection", [EdgeDetection(50, 150)])
+    base_dataset = "E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean"
+    new_dataset = "E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-edged"
+    create_preprocessed_dataset(preprocessor, base_dataset, new_dataset)
