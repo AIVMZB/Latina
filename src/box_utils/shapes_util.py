@@ -4,6 +4,13 @@ import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
 from typing import NamedTuple, Union, Sequence, List, Dict, Set, Callable
 from prettyprinter import pprint
+import torch
+from enum import Enum, auto
+
+
+class BoxFormat:
+    xyxy = auto()
+    xywh = auto()
 
 
 class Bbox(NamedTuple):
@@ -53,8 +60,31 @@ def to_obb(shape: Union[Bbox, Sequence]) -> Obb:
     """
     if isinstance(shape, Bbox):
         return bbox_to_obb(shape)
-    elif isinstance(shape, Sequence):
+    if isinstance(shape, Sequence):
         return Obb(*shape)
+    if isinstance(shape, Obb):
+        return shape
+
+
+def yolo_result_to_obb(yolo_result: torch.Tensor) -> Obb:
+    yolo_result = yolo_result.to("cpu").numpy()
+    return Obb(yolo_result[0, 0], yolo_result[0, 1], yolo_result[1, 0], yolo_result[1, 1], 
+               yolo_result[2, 0], yolo_result[2, 1], yolo_result[3, 0], yolo_result[3, 1])
+
+
+def yolo_result_to_bbox(yolo_result: torch.Tensor, input_format: BoxFormat) -> Obb:
+    yolo_result = yolo_result.to("cpu").numpy()
+    if input_format == BoxFormat.xyxy:
+        yolo_result = [(yolo_result[0] + yolo_result[2]) / 2, 
+                       (yolo_result[1] + yolo_result[3]) / 2, 
+                       yolo_result[2] - yolo_result[0], 
+                       yolo_result[3] - yolo_result[1]]
+    elif input_format == BoxFormat.xywh:
+        yolo_result = [yolo_result[0] + yolo_result[2] / 2,
+                       yolo_result[1] + yolo_result[3] / 2,
+                       yolo_result[2], yolo_result[3]]
+
+    return Bbox(*yolo_result)
 
 
 def read_shapes(filename: str, transform_func: Callable[[List[float]], Union[Bbox, Obb]], class_nums: Union[str, List[str], Set[str]]) -> Union[List[Bbox], List[Obb]]:
@@ -103,11 +133,25 @@ def obb_to_polygon(obb: Union[list, Obb]) -> Polygon:
     return Polygon(points)
 
 
-def intersection_area(shape_1: Obb, shape_2: Obb) -> list:
+def intersection_area(shape_1: Obb, shape_2: Obb) -> float:
     pol_1 = obb_to_polygon(shape_1)
     pol_2 = obb_to_polygon(shape_2)
 
     return pol_1.intersection(pol_2).area
+
+
+def union_area(shape_1: Obb, shape_2: Obb) -> float:
+    pol_1 = obb_to_polygon(shape_1)
+    pol_2 = obb_to_polygon(shape_2)
+
+    return pol_1.union(pol_2).area
+
+
+def IoU(shape_1: Obb, shape_2: Obb) -> float:
+    intersection = intersection_area(shape_1, shape_2)
+    union = union_area(shape_1, shape_2)
+
+    return intersection / union
 
 
 def obb_to_image_coords(width: int, height: int, obb: Obb) -> Obb:
@@ -211,6 +255,14 @@ def plot_obb_on_image(image: np.ndarray, obb: Obb, color: tuple = (0, 0, 255)) -
     return cv2.polylines(image, [im_obb], True, color, 5)
 
 
+def plot_lines_on_image(image: np.ndarray, lines: List[Obb], color: tuple = (0, 0, 255)) -> np.ndarray:
+    plotted_image = image.copy()
+    for line in lines:
+        plotted_image = plot_obb_on_image(image, line, color)
+    
+    return plotted_image
+
+
 def line_bbox_on_image(image: np.ndarray, bbox: Bbox, color: tuple = (0, 0, 255)) -> np.ndarray:
     obb = bbox_to_obb(bbox)
 
@@ -278,26 +330,3 @@ def sort_words_by_lines(line_to_words: Dict[int, List[int]], words: List[Bbox]) 
         sorted_line_to_words[line_index] = sorted_indices
     
     return sorted_line_to_words
-
-
-if __name__ == "__main__":
-    lines = read_shapes(r"D:\GitHub\Latina\datasets\datasets\lines-obb-clean\train\AUR_891_III_9-101 (text).txt",
-                        transform_func=to_obb, class_nums="0")
-    words = read_shapes(r"D:\GitHub\Latina\datasets\datasets\seven-classes\train\AUR_891_III_9-101 (text).txt",
-                        transform_func=to_bbox, class_nums=["1", "2", "3", "6"])
-
-    image = cv2.imread(r"D:\GitHub\Latina\datasets\datasets\seven-classes\train\AUR_891_III_9-101 (text).jpg")
-    line_to_words = map_words_to_lines(words, lines, image)
-    
-    sorted_line_to_words = sort_words_by_lines(line_to_words, words)
-    
-    word = words[337]
-    line_1 = lines[0]
-   
-    image = plot_obb_on_image(image, to_obb(word))
-    image = plot_obb_on_image(image, line_1)
-    
-    plt.imshow(image)
-    plt.show()
-
-    pprint(sorted_line_to_words)

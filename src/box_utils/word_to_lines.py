@@ -1,7 +1,7 @@
-from bbox_utils.shapes_util import Bbox, Obb
+from box_utils.shapes_util import Bbox, Obb
 import cv2
 import numpy as np
-import bbox_utils.shapes_util as su
+import box_utils.shapes_util as su
 from skimage.draw import polygon2mask
 import os
 import random

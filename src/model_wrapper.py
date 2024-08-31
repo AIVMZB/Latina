@@ -1,10 +1,12 @@
 from preprocessing.preprocessor import ImagePreprocessor
-from bbox_utils.shapes_util import Obb
-from bbox_utils.word_to_lines import crop_line_from_image
-from bbox_utils.lines_util import extend_line_to_corners
+from box_utils.shapes_util import plot_lines_on_image
+from box_utils.word_to_lines import crop_line_from_image
+from box_utils.lines_util import extend_line_to_corners
+from intersect_resolver import ChooseByConf, resolve_intersected_objects, tensor_to_boxes
 
 from ultralytics import YOLO
 from typing import Union
+import matplotlib.pyplot as plt
 import cv2
 import torch
 import os
@@ -82,7 +84,10 @@ class YoloWrapper:
     
 
 class LineWordPipeline:
-    def __init__(self, line_detection_model: str, word_detection_model: str, device: str = "cuda:0"):
+    def __init__(self, 
+                 line_detection_model: str, 
+                 word_detection_model: str, 
+                 device: str = "cuda:0"):
         """
         Creates instance of LineWordPipeline
         Args:
@@ -93,9 +98,10 @@ class LineWordPipeline:
         self._device = torch.device(device)
         self._line_model = YOLO(line_detection_model).to(self._device)
         self._word_model = YOLO(word_detection_model).to(self._device)
+        self._line_int_resolver = ChooseByConf()
+        self._word_int_resolver = ChooseByConf()
 
     def predict_on_image(self, image_path: str, output_path: str, 
-                         plot_lines: bool = False,
                          line_conf: float = 0.5, word_conf: float = 0.4):
         """
         Crops detected lines from image and predicts words on it
@@ -109,23 +115,31 @@ class LineWordPipeline:
         os.makedirs(output_path, exist_ok=True)
 
         line_results = self._line_model.predict([image_path], conf=line_conf)
-        if plot_lines:
-            line_results[0].plot(labels=True, probs=False, show=True, save=True, line_width=2, 
-                                 filename=os.path.join(output_path, "lines.jpg"))
             
-        lines = line_results[0].obb.xyxyxyxyn.to("cpu").numpy()
+        lines = line_results[0].obb.xyxyxyxyn
+        line_confs = line_results[0].obb.conf
+        resolved_lines = resolve_intersected_objects(lines, line_confs, 0.1, self._line_int_resolver)
+
         image = cv2.imread(image_path)
-        for i in range(lines.shape[0]):
-            line = lines[i]
-            line = Obb(line[0, 0], line[0, 1], line[1, 0], line[1, 1], line[2, 0], line[2, 1], line[3, 0], line[3, 1])
+
+        raw_lines_image = plot_lines_on_image(image.copy(), tensor_to_boxes(lines))
+        resolved_lines_image = plot_lines_on_image(image.copy(), resolved_lines)
+
+        cv2.imwrite(os.path.join(output_path, "line_predictions.jpg"), raw_lines_image)
+        cv2.imwrite(os.path.join(output_path, "intersection_resolved_lines.jpg"), resolved_lines_image)
+
+        image = cv2.imread(image_path)
+        for i in range(len(resolved_lines)):
+            line = resolved_lines[i]
             line = extend_line_to_corners(line)
             line_image = crop_line_from_image(image, line)
 
             if line_image.size == 0:
-                print("[WARNING] Failed to crop line. Its size is zero!")
+                print("[WARNING] Failed to crop a line. Its size is zero!")
                 continue
 
             word_results = self._word_model.predict([line_image], conf=word_conf)
             
             word_results[0].plot(labels=True, probs=False, show=False, save=True, line_width=2,
                         filename=os.path.join(output_path, f"{i}.jpg"))
+            
