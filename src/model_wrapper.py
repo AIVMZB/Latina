@@ -1,12 +1,11 @@
 from preprocessing.preprocessor import ImagePreprocessor
 from box_utils.shapes_util import plot_obbs_on_image
 from box_utils.word_to_lines import crop_line_from_image
-from box_utils.lines_util import extend_line_to_corners, extend_lines_to_corners
-from intersect_resolver import ByConfidenceResolver, MeanResolver, resolve_intersected_objects, tensor_to_boxes
+from box_utils.lines_util import extend_lines_to_corners
+from intersect_resolver import IntersectionResolver, build_resolver_by_name, resolve_intersected_objects, tensor_to_boxes
 
 from ultralytics import YOLO
 from typing import Union
-import matplotlib.pyplot as plt
 import cv2
 import torch
 import os
@@ -86,7 +85,11 @@ class YoloWrapper:
 class LineWordPipeline:
     def __init__(self, 
                  line_detection_model: str, 
-                 word_detection_model: str, 
+                 word_detection_model: str,
+                 line_conf: float,
+                 word_conf: float,
+                 line_int_resolver: IntersectionResolver | None,
+                 word_int_resolver: IntersectionResolver | None,
                  device: str = "cuda:0"):
         """
         Creates instance of LineWordPipeline
@@ -98,11 +101,14 @@ class LineWordPipeline:
         self._device = torch.device(device)
         self._line_model = YOLO(line_detection_model).to(self._device)
         self._word_model = YOLO(word_detection_model).to(self._device)
-        self._line_int_resolver = MeanResolver()
-        self._word_int_resolver = ByConfidenceResolver()
+        
+        self._line_int_resolver = line_int_resolver
+        self._word_int_resolver = word_int_resolver
 
-    def predict_on_image(self, image_path: str, output_path: str, 
-                         line_conf: float = 0.55, word_conf: float = 0.4):
+        self._line_conf = line_conf
+        self._word_conf = word_conf
+
+    def predict_on_image(self, image_path: str, output_path: str):
         """
         Crops detected lines from image and predicts words on it
         Args:
@@ -114,22 +120,25 @@ class LineWordPipeline:
         """
         os.makedirs(output_path, exist_ok=True)
 
-        line_results = self._line_model.predict([image_path], conf=line_conf)
+        line_results = self._line_model.predict([image_path], conf=self._line_conf)
             
         lines = line_results[0].obb.xyxyxyxyn
         line_confs = line_results[0].obb.conf
-        resolved_lines = resolve_intersected_objects(lines, line_confs, 0.2, self._line_int_resolver)
-        resolved_lines = extend_lines_to_corners(resolved_lines)
-
+        
         image = cv2.imread(image_path)
-
         raw_lines_image = plot_obbs_on_image(image.copy(), tensor_to_boxes(lines), (255, 0, 0))
-        resolved_lines_image = plot_obbs_on_image(image.copy(), resolved_lines, (255, 0, 0))
-
         cv2.imwrite(os.path.join(output_path, "line_predictions.jpg"), raw_lines_image)
-        cv2.imwrite(os.path.join(output_path, "intersection_resolved_lines.jpg"), resolved_lines_image)
+        
+        if self._line_int_resolver is not None:
+            resolved_lines = resolve_intersected_objects(lines, line_confs, 0.2, self._line_int_resolver)
+            resolved_lines = extend_lines_to_corners(resolved_lines)
+        
+            resolved_lines_image = plot_obbs_on_image(image.copy(), resolved_lines, (255, 0, 0))
+            cv2.imwrite(os.path.join(output_path, "intersection_resolved_lines.jpg"), resolved_lines_image)
+        else:
+            resolved_lines = raw_lines_image
 
-        image = cv2.imread(image_path)
+
         for i in range(len(resolved_lines)):
             line = resolved_lines[i]
             line_image = crop_line_from_image(image, line)
@@ -138,20 +147,41 @@ class LineWordPipeline:
                 print("[WARNING] Failed to crop a line. Its size is zero!")
                 continue
 
-            word_results = self._word_model.predict([line_image], conf=word_conf)
+            word_results = self._word_model.predict([line_image], conf=self._word_conf)
             
             words = word_results[0].boxes.xyxyn
             word_confs = word_results[0].boxes.conf
-            
-            resolved_words = resolve_intersected_objects(words, word_confs, 0.1, self._word_int_resolver)
-            words = tensor_to_boxes(words)
 
-            prediction_image = plot_obbs_on_image(line_image.copy(), words, (255, 0, 0))
+            prediction_image = plot_obbs_on_image(line_image.copy(), tensor_to_boxes(words), (255, 0, 0))
             cv2.imwrite(os.path.join(output_path, f"{i}.jpg"), prediction_image)
-            
-            prediction_image = plot_obbs_on_image(line_image.copy(), resolved_words, (255, 0, 0))
-            cv2.imwrite(os.path.join(output_path, f"{i}-r.jpg"), prediction_image)
 
-            # word_results[0].plot(labels=True, probs=False, show=False, save=True, line_width=2,
-            #             filename=os.path.join(output_path, f"{i}.jpg"))
-            
+            if self._word_int_resolver is not None:
+                resolved_words = resolve_intersected_objects(words, word_confs, 0.1, self._word_int_resolver)
+
+                prediction_image = plot_obbs_on_image(line_image.copy(), resolved_words, (255, 0, 0))
+                cv2.imwrite(os.path.join(output_path, f"{i}-r.jpg"), prediction_image)
+
+
+def build_line_word_pipeline(config: dict[str, any]):
+    """
+    Builds LineWordPipeline based on config file
+    Args:
+        config (dict[str, any]) - parsed yaml file
+    Returns:
+        line_word_pipeline (LineWordPipeline)
+    """
+    line_int_resolver = build_resolver_by_name(
+        config["line_detection"].get("intersection_resolver")
+    )
+    word_int_resolver = build_resolver_by_name(
+        config["word_detection"].get("intersection_resolver")
+    )
+    
+    return LineWordPipeline(
+        config["line_detection"]["model_path"],
+        config["word_detection"]["model_path"],
+        config["line_detection"]["min_conf"],
+        config["word_detection"]["min_conf"],
+        line_int_resolver,
+        word_int_resolver
+    )

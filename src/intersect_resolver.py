@@ -1,6 +1,5 @@
 from typing import Union, List
 from abc import ABC, abstractmethod
-import numpy as np
 import torch
 
 import box_utils.shapes_util as su
@@ -56,9 +55,41 @@ class ByConfidenceResolver(IntersectionResolver):
         return box_1 if conf_1 > conf_2 else box_2
 
 
-class Unite(IntersectionResolver):
-    ...
+class UnionResolver(IntersectionResolver):
+    def __call__(self, 
+                 box_1: su.Obb, 
+                 conf_1: float,
+                 box_2: su.Obb,
+                 conf_2: float) -> su.Obb:
+        x_list = [box_1[i] for i in range(0, 8, 2)] + [box_2[i] for i in range(0, 8, 2)] 
+        y_list = [box_1[i] for i in range(1, 8, 2)] + [box_2[i] for i in range(1, 8, 2)] 
 
+        max_x = max(x_list)
+        min_x = min(x_list)
+        max_y = max(y_list)
+        min_y = min(y_list)
+
+        return su.Obb(min_x, min_y, max_x, min_y, max_x, max_y, min_x, max_y)
+
+
+def build_resolver_by_name(resolver_name: str | None) -> IntersectionResolver | None:
+    """
+    Build specific IntersectionResolver object based on name. If needed resolver is not found, returns None
+    Args:
+        resolver_name (str | None) - name of an intersection resolver
+    Returns:
+        resolver (IntersectionResolver | None)
+    """
+    if resolver_name == "ByConfResolver":
+        from intersect_resolver import ByConfidenceResolver
+        return ByConfidenceResolver()
+    if resolver_name == "MeanResolver":
+        from intersect_resolver import MeanResolver
+        return MeanResolver()
+    if resolver_name == "UnionResolver":
+        from intersect_resolver import UnionResolver
+        return UnionResolver()
+    
 
 class MeanResolver(IntersectionResolver):    
     def __call__(self, 
@@ -88,7 +119,7 @@ def resolve_intersected_objects(
         confs: torch.Tensor,
         threshold: float, 
         resolver: IntersectionResolver
-    ) -> Union[List[su.Bbox], List[su.Obb]]:
+    ) -> List[su.Obb]:
     boxes = tensor_to_boxes(boxes)
     confs = confs.to("cpu")
     intersected_boxes = find_intersecting_objects(boxes, threshold)
