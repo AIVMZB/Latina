@@ -1,8 +1,8 @@
-from preprocessing.preprocessor import ImagePreprocessor
-from box_utils.shapes_util import plot_obbs_on_image
-from box_utils.word_to_lines import crop_line_from_image
-from box_utils.lines_util import extend_lines_to_corners
-from intersect_resolver import IntersectionResolver, build_resolver_by_name, resolve_intersected_objects, tensor_to_boxes
+from detection.preprocessing.preprocessor import ImagePreprocessor
+from detection.bounding_boxes.shapes import plot_obbs_on_image
+from detection.bounding_boxes.word_to_lines import crop_line_from_image
+from detection.bounding_boxes.lines import extend_lines_to_corners
+from detection.intersect_resolver import IntersectionResolver, build_resolver_by_name, resolve_intersected_objects, tensor_to_boxes
 
 from ultralytics import YOLO
 from typing import Union

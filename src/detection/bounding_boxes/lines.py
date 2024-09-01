@@ -1,9 +1,5 @@
-from .shapes_util import Obb, read_shapes, to_obb, plot_obb_on_image
-import matplotlib.pyplot as plt
+from .shapes import Obb
 import numpy as np
-import cv2
-from prettyprinter import pprint
-from ultralytics import YOLO
 
 
 def find_top_left(box: Obb) -> tuple[float, float]:

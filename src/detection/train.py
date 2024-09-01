@@ -1,5 +1,5 @@
-from model_wrapper import YoloWrapper
-from preprocessing.preprocessor import ImagePreprocessor, EdgeDetection
+from detection.model_wrapper import YoloWrapper
+from detection.preprocessing.preprocessor import ImagePreprocessor, EdgeDetection
 
 
 if __name__ == "__main__":

@@ -1,14 +1,13 @@
 import numpy as np
-import cv2
-import matplotlib.pyplot as plt
-from shapely.geometry import Polygon
-from typing import NamedTuple, Union, Sequence, List, Dict, Set, Callable
-from prettyprinter import pprint
 import torch
+import cv2
+
+from typing import NamedTuple, Union, Sequence, List, Dict, Set, Callable
+from shapely.geometry import Polygon
 from enum import Enum, auto
 
 
-class BoxFormat:
+class BoxFormat(Enum):
     xyxy = auto()
     xywh = auto()
 

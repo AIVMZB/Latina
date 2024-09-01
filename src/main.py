@@ -1,8 +1,7 @@
-import os
 import yaml
-
-from model_wrapper import build_line_word_pipeline
 import argparse
+
+from detection.model_wrapper import build_line_word_pipeline
 
 
 WORD_DETECTION_IMG_SIZE = 512
