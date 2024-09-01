@@ -1,7 +1,7 @@
 import cv2
 import os
-from box_utils.shapes_util import read_shapes, to_bbox, to_obb
-from dataset_utils.samples_creator import process_lines_and_terms, assign_terms_to_words
+from detection.bounding_boxes.shapes import read_shapes, to_bbox, to_obb
+from detection.dataset_utils.samples_creator import process_lines_and_terms, assign_terms_to_words
 
 
 if __name__ == "__main__":

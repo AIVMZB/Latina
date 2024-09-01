@@ -1,5 +1,5 @@
 import os
-from preprocessor import ImagePreprocessor, EdgeDetection
+from .preprocessor import ImagePreprocessor, EdgeDetection
 import shutil
 import cv2
 

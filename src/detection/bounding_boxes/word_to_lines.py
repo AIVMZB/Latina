@@ -1,12 +1,13 @@
-from box_utils.shapes_util import Bbox, Obb
 import cv2
 import numpy as np
-import box_utils.shapes_util as su
 from skimage.draw import polygon2mask
 import os
 import random
 import shutil
 from typing import Optional
+
+from detection.bounding_boxes.shapes import Bbox, Obb
+import detection.bounding_boxes.shapes as sh
 
 
 def obb_to_nparray(obb: Obb) -> np.ndarray:
@@ -36,7 +37,7 @@ def obb_to_rec(obb: Obb) -> list:
 
 
 def crop_line_from_image(image: np.ndarray, line: Obb, white_bg: bool = False) -> np.ndarray:
-    line = su.obb_to_image_coords(image.shape[1], image.shape[0], line)
+    line = sh.obb_to_image_coords(image.shape[1], image.shape[0], line)
     np_line = obb_to_nparray(line)
     for i in range(np_line.shape[0]):
         np_line[i][0], np_line[i][1] = np_line[i][1], np_line[i][0]
@@ -135,7 +136,7 @@ def create_lines_dataset_from_image(image_path: str,
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
     
-    line_to_words = su.map_words_to_lines(words, lines, image)
+    line_to_words = sh.map_words_to_lines(words, lines, image)
     for line_idx in line_to_words:
         line = lines[line_idx]
 
@@ -183,7 +184,7 @@ def create_dataset_of_lines(words_dataset_path: str,
 
     for word_label in word_label_paths:
         image_path = word_label.split(".")[0] + ".jpg"
-        word_bboxes = su.read_shapes(word_label, su.to_bbox, words_ids)
+        word_bboxes = sh.read_shapes(word_label, sh.to_bbox, words_ids)
         line_label = find_line_label(word_label, line_label_paths)
         if line_label is None:
             print(f"[WARNING] - {os.path.basename(word_label)} was not found in line labels")
@@ -191,7 +192,7 @@ def create_dataset_of_lines(words_dataset_path: str,
         
         print(f"[INFO] processing {os.path.basename(word_label).split('.')[0]}")
 
-        line_obbs = su.read_shapes(line_label, su.to_obb, lines_ids)
+        line_obbs = sh.read_shapes(line_label, sh.to_obb, lines_ids)
 
         create_lines_dataset_from_image(image_path, line_obbs, word_bboxes, output_dataset_path, white_bg=True)
         

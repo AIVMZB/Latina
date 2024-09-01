@@ -1,4 +1,4 @@
-from box_utils.shapes_util import to_bbox, map_words_to_lines, sort_words_by_lines, Bbox
+from detection.bounding_boxes.shapes import to_bbox, map_words_to_lines, sort_words_by_lines, Bbox
 from PIL import Image
 import numpy as np
 import os
