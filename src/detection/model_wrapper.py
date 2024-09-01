@@ -1,5 +1,5 @@
 from detection.preprocessing.preprocessor import ImagePreprocessor
-from detection.bounding_boxes.shapes import plot_obbs_on_image
+from detection.bounding_boxes.plotter import plot_obbs_on_image
 from detection.bounding_boxes.word_to_lines import crop_line_from_image
 from detection.bounding_boxes.lines import extend_lines_to_corners
 from detection.intersect_resolver import IntersectionResolver, build_resolver_by_name, resolve_intersected_objects, tensor_to_boxes
