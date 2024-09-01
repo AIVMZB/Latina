@@ -1,8 +1,8 @@
 from preprocessing.preprocessor import ImagePreprocessor
-from box_utils.shapes_util import plot_lines_on_image
+from box_utils.shapes_util import plot_obbs_on_image
 from box_utils.word_to_lines import crop_line_from_image
-from box_utils.lines_util import extend_line_to_corners
-from intersect_resolver import ChooseByConf, resolve_intersected_objects, tensor_to_boxes
+from box_utils.lines_util import extend_line_to_corners, extend_lines_to_corners
+from intersect_resolver import ByConfidenceResolver, MeanResolver, resolve_intersected_objects, tensor_to_boxes
 
 from ultralytics import YOLO
 from typing import Union
@@ -98,11 +98,11 @@ class LineWordPipeline:
         self._device = torch.device(device)
         self._line_model = YOLO(line_detection_model).to(self._device)
         self._word_model = YOLO(word_detection_model).to(self._device)
-        self._line_int_resolver = ChooseByConf()
-        self._word_int_resolver = ChooseByConf()
+        self._line_int_resolver = MeanResolver()
+        self._word_int_resolver = ByConfidenceResolver()
 
     def predict_on_image(self, image_path: str, output_path: str, 
-                         line_conf: float = 0.5, word_conf: float = 0.4):
+                         line_conf: float = 0.55, word_conf: float = 0.4):
         """
         Crops detected lines from image and predicts words on it
         Args:
@@ -118,12 +118,13 @@ class LineWordPipeline:
             
         lines = line_results[0].obb.xyxyxyxyn
         line_confs = line_results[0].obb.conf
-        resolved_lines = resolve_intersected_objects(lines, line_confs, 0.1, self._line_int_resolver)
+        resolved_lines = resolve_intersected_objects(lines, line_confs, 0.2, self._line_int_resolver)
+        resolved_lines = extend_lines_to_corners(resolved_lines)
 
         image = cv2.imread(image_path)
 
-        raw_lines_image = plot_lines_on_image(image.copy(), tensor_to_boxes(lines))
-        resolved_lines_image = plot_lines_on_image(image.copy(), resolved_lines)
+        raw_lines_image = plot_obbs_on_image(image.copy(), tensor_to_boxes(lines), (255, 0, 0))
+        resolved_lines_image = plot_obbs_on_image(image.copy(), resolved_lines, (255, 0, 0))
 
         cv2.imwrite(os.path.join(output_path, "line_predictions.jpg"), raw_lines_image)
         cv2.imwrite(os.path.join(output_path, "intersection_resolved_lines.jpg"), resolved_lines_image)
@@ -131,7 +132,6 @@ class LineWordPipeline:
         image = cv2.imread(image_path)
         for i in range(len(resolved_lines)):
             line = resolved_lines[i]
-            line = extend_line_to_corners(line)
             line_image = crop_line_from_image(image, line)
 
             if line_image.size == 0:
@@ -140,6 +140,18 @@ class LineWordPipeline:
 
             word_results = self._word_model.predict([line_image], conf=word_conf)
             
-            word_results[0].plot(labels=True, probs=False, show=False, save=True, line_width=2,
-                        filename=os.path.join(output_path, f"{i}.jpg"))
+            words = word_results[0].boxes.xyxyn
+            word_confs = word_results[0].boxes.conf
+            
+            resolved_words = resolve_intersected_objects(words, word_confs, 0.1, self._word_int_resolver)
+            words = tensor_to_boxes(words)
+
+            prediction_image = plot_obbs_on_image(line_image.copy(), words, (255, 0, 0))
+            cv2.imwrite(os.path.join(output_path, f"{i}.jpg"), prediction_image)
+            
+            prediction_image = plot_obbs_on_image(line_image.copy(), resolved_words, (255, 0, 0))
+            cv2.imwrite(os.path.join(output_path, f"{i}-r.jpg"), prediction_image)
+
+            # word_results[0].plot(labels=True, probs=False, show=False, save=True, line_width=2,
+            #             filename=os.path.join(output_path, f"{i}.jpg"))
             

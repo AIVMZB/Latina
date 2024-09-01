@@ -1,11 +1,13 @@
-import box_utils.shapes_util as su
 from typing import Union, List
 from abc import ABC, abstractmethod
 import numpy as np
 import torch
 
+import box_utils.shapes_util as su
+from box_utils.lines_util import find_bottom_left, find_bottom_right, find_top_right, find_top_left
 
-def find_intersecting_objects(boxes: Union[List[su.Bbox], List[su.Obb]], threshold: float = 0.4) -> List[tuple[int, int]]:
+
+def find_intersecting_objects(boxes: List[su.Obb], threshold: float = 0.4) -> List[tuple[int, int]]:
     """
     Finds interseceted boxes by IoU
     Args:
@@ -24,43 +26,61 @@ def find_intersecting_objects(boxes: Union[List[su.Bbox], List[su.Obb]], thresho
     return intersecting_objects
 
 
-def tensor_to_boxes(boxes: torch.Tensor) -> Union[List[su.Bbox], List[su.Obb]]:
+def tensor_to_boxes(boxes: torch.Tensor) -> List[su.Obb]:
     shapes = []
     for i in range(boxes.shape[0]):
         box = boxes[i]
-        if len(box.shape) == 2:
-            shapes.append(
-                su.yolo_result_to_obb(box)
-            )
-        elif len(box.shape) == 1:
-            shapes.append(
-                su.yolo_result_to_bbox(box, su.BoxFormat.xyxy)
-            )
-    
+        shapes.append(
+            su.yolo_result_to_obb(box)
+        )
+            
     return shapes
 
 
 class IntersectionResolver(ABC):
     @abstractmethod
     def __call__(self, 
-                 box_1: Union[su.Bbox, su.Obb], 
+                 box_1: su.Obb, 
                  conf_1: float,
-                 box_2: Union[su.Bbox, su.Obb],
-                 conf_2: float) -> Union[su.Obb, su.Bbox]:
+                 box_2: su.Obb,
+                 conf_2: float) -> su.Obb:
         pass
 
 
-class ChooseByConf(IntersectionResolver):
+class ByConfidenceResolver(IntersectionResolver):
     def __call__(self, 
-                 box_1: Union[su.Bbox, su.Obb], 
+                 box_1: su.Obb, 
                  conf_1: float,
-                 box_2: Union[su.Bbox, su.Obb],
-                 conf_2: float) -> Union[su.Obb, su.Bbox]:
+                 box_2: su.Obb,
+                 conf_2: float) -> su.Obb:
         return box_1 if conf_1 > conf_2 else box_2
 
 
 class Unite(IntersectionResolver):
     ...
+
+
+class MeanResolver(IntersectionResolver):    
+    def __call__(self, 
+                 box_1: su.Obb, 
+                 conf_1: float,
+                 box_2: su.Obb,
+                 conf_2: float) -> su.Obb:
+        box_1 = su.Obb(*find_top_left(box_1), 
+                       *find_top_right(box_1), 
+                       *find_bottom_right(box_1), 
+                       *find_bottom_left(box_1))
+
+        box_2 = su.Obb(*find_top_left(box_2), 
+                       *find_top_right(box_2), 
+                       *find_bottom_right(box_2), 
+                       *find_bottom_left(box_2))
+        
+        result_box = [0] * 8
+        for i in range(8):
+            result_box[i] = (box_1[i] + box_2[i]) / 2
+        
+        return su.Obb(*result_box)
 
 
 def resolve_intersected_objects(
@@ -78,9 +98,7 @@ def resolve_intersected_objects(
         j = pair[1]
         
         chosen_box = resolver(boxes[i], confs[i], boxes[j], confs[j])
-        if chosen_box == boxes[i]:
-            boxes[j] = None
-        elif chosen_box == boxes[j]:
-            boxes[i] = None
+        boxes[i] = chosen_box
+        boxes[j] = None
     
     return list(filter(lambda x: x != None, boxes))

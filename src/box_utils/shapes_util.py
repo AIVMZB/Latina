@@ -68,8 +68,15 @@ def to_obb(shape: Union[Bbox, Sequence]) -> Obb:
 
 def yolo_result_to_obb(yolo_result: torch.Tensor) -> Obb:
     yolo_result = yolo_result.to("cpu").numpy()
-    return Obb(yolo_result[0, 0], yolo_result[0, 1], yolo_result[1, 0], yolo_result[1, 1], 
-               yolo_result[2, 0], yolo_result[2, 1], yolo_result[3, 0], yolo_result[3, 1])
+
+    if len(yolo_result.shape) == 2:
+        return Obb(yolo_result[0, 0], yolo_result[0, 1], yolo_result[1, 0], yolo_result[1, 1], 
+                   yolo_result[2, 0], yolo_result[2, 1], yolo_result[3, 0], yolo_result[3, 1])
+    elif len(yolo_result.shape) == 1:
+        return Obb(yolo_result[0], yolo_result[1], 
+                   yolo_result[2], yolo_result[1], 
+                   yolo_result[2], yolo_result[3], 
+                   yolo_result[0], yolo_result[3])
 
 
 def yolo_result_to_bbox(yolo_result: torch.Tensor, input_format: BoxFormat) -> Obb:
@@ -252,13 +259,13 @@ def plot_obb_on_image(image: np.ndarray, obb: Obb, color: tuple = (0, 0, 255)) -
     
     im_obb = im_obb.reshape((-1, 1, 2))
 
-    return cv2.polylines(image, [im_obb], True, color, 5)
+    return cv2.polylines(image, [im_obb], True, color, 3)
 
 
-def plot_lines_on_image(image: np.ndarray, lines: List[Obb], color: tuple = (0, 0, 255)) -> np.ndarray:
+def plot_obbs_on_image(image: np.ndarray, obbs: List[Obb], color: tuple=(0, 0, 255)) -> np.ndarray:
     plotted_image = image.copy()
-    for line in lines:
-        plotted_image = plot_obb_on_image(image, line, color)
+    for obb in obbs:
+        plotted_image = plot_obb_on_image(image, obb, color)
     
     return plotted_image
 
