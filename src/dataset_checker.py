@@ -1,6 +1,6 @@
 import cv2
 import os
-from bbox_utils.shapes_util import read_shapes, to_bbox, to_obb
+from box_utils.shapes_util import read_shapes, to_bbox, to_obb
 from dataset_utils.samples_creator import process_lines_and_terms, assign_terms_to_words
 
 

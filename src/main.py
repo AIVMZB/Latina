@@ -1,27 +1,38 @@
 import os
-from model_wrapper import LineWordPipeline
+import yaml
+
+from model_wrapper import build_line_word_pipeline
+import argparse
 
 
 WORD_DETECTION_IMG_SIZE = 512
 LINE_DETECTION_IMG_SIZE = 768
 
-WORD_DETECT_BEST_MODEL = os.path.join("..", "models", "word_detect_m_best.pt")
-LINES_OBB_BEST = os.path.join("..", "models", "lines_obb_m_best.pt")
 
-# TODO:
-# 1) Try training with image preparation
-# 2) Deal with intersecting words and lines
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", type=str, required=True, help="Path to image")
+
+    return parser.parse_args()
+
 
 if __name__ == "__main__":
-    image_path = input("Input image path here\n>>> ")
+    args = parse_args()
+    image = args.image
 
-    pipeline = LineWordPipeline(LINES_OBB_BEST, WORD_DETECT_BEST_MODEL, "cuda:0")
+    with open("../config/inference.yaml", 'r') as f:
+        config = yaml.safe_load(f)
+
+    pipeline = build_line_word_pipeline(config)
+    
     pipeline.predict_on_image(
-        image_path,
-        r"../predictions",
-        plot_lines=True,
-        line_conf=0.35
+        image,
+        config["prediction_dir"]
     )
 
-    print("The results are saved in '../predictions' folder")
+    print(f"The results are saved in {config['prediction_dir']} folder")
 
+
+# TODO:
+# 2) Move plot function to separate module
+# 3) Rename shapes_util to shapes
