@@ -73,6 +73,8 @@ class YoloWrapper:
         result.plot(labels=True, probs=False, show=show_plot, save=True, line_width=2,
                     filename=os.path.join(prediction_dir, os.path.basename(image_path)))
 
+        return result
+
     @property
     def model(self) -> YOLO:
         return self._model

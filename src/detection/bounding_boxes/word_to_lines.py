@@ -1,13 +1,22 @@
-import cv2
-import numpy as np
 from skimage.draw import polygon2mask
-import os
+import matplotlib.pyplot as plt
+from typing import Optional
+from enum import Enum, auto
+import numpy as np
 import random
 import shutil
-from typing import Optional
+import cv2
+import os
 
-from detection.bounding_boxes.shapes import Bbox, Obb
-import detection.bounding_boxes.shapes as sh
+from shapes import Bbox, Obb
+from lines import line_angle
+import shapes as sh
+
+
+class CropMaskColor(Enum):
+    WHITE = auto()
+    BLACK = auto()
+    MEAN = auto()
 
 
 def obb_to_nparray(obb: Obb) -> np.ndarray:
@@ -23,6 +32,7 @@ def obb_to_bbox(obb: Obb) -> Bbox:
     x, y, w, h = cv2.boundingRect(points)
     x = (x + w) / 2
     y = (y + h) / 2
+
     return Bbox(x, y, w, h)
 
 
@@ -36,7 +46,21 @@ def obb_to_rec(obb: Obb) -> list:
     return [x, y, w, h]
 
 
-def crop_line_from_image(image: np.ndarray, line: Obb, white_bg: bool = False) -> np.ndarray:
+def mean_image_color(image: np.ndarray) -> np.ndarray:
+    r_mean = np.mean(image[:, :, 0])
+    g_mean = np.mean(image[:, :, 1])
+    b_mean = np.mean(image[:, :, 2])
+
+    return np.array([r_mean, g_mean, b_mean])
+
+
+def crop_line_from_image(
+        image: np.ndarray,
+        line: Obb,
+        rotate: bool = True,
+        mask_image: bool = True,
+        mask_color: CropMaskColor = CropMaskColor.BLACK
+    ) -> np.ndarray:
     line = sh.obb_to_image_coords(image.shape[1], image.shape[0], line)
     np_line = obb_to_nparray(line)
     for i in range(np_line.shape[0]):
@@ -45,16 +69,37 @@ def crop_line_from_image(image: np.ndarray, line: Obb, white_bg: bool = False) -
     line_mask = polygon2mask(image.shape[:2], np_line)
 
     line_mask = np.stack([line_mask, line_mask, line_mask], axis=-1)
-
-    masked_image = image * line_mask
-    if white_bg:
-        masked_image = np.vectorize(lambda x: 255 if x == 0 else x)(masked_image)
-
     x, y, w, h = obb_to_rec(line)
+    
+    cropped = image[y:y+h, x:x+w].copy()
+    if any(dim == 0 for dim in cropped.shape):
+        return cropped
 
-    croped = masked_image[y:y+h, x:x+w].copy()
+    if mask_image:
+        cropped_mask = line_mask[y:y+h, x:x+w].copy()
+        cropped = cropped * cropped_mask
 
-    return croped
+    if rotate:
+        rotation_matrix = cv2.getRotationMatrix2D(
+            (cropped.shape[1] // 2, cropped.shape[0] // 2), 
+            line_angle(line), 
+            scale=1
+        )
+        cropped = cv2.warpAffine(
+            cropped, 
+            rotation_matrix, 
+            (cropped.shape[1], cropped.shape[0]),
+            borderMode=cv2.BORDER_CONSTANT
+        )
+
+    if mask_color == CropMaskColor.WHITE:
+        cropped = np.vectorize(lambda x: 255 if x == 0 else x)(cropped)
+    elif mask_color == CropMaskColor.MEAN:
+        mean_color = mean_image_color(image)
+        mask = np.all(cropped == 0, axis=-1)
+        cropped[mask] = mean_color
+
+    return cropped
 
 
 def crop_bbox(bbox: Bbox) -> Bbox:
@@ -124,8 +169,10 @@ def write_bboxes_to_file(bboxes: list[Bbox], filename: str, class_name: str) -> 
 
 def create_lines_dataset_from_image(image_path: str,
                                     lines: list[Obb], words: list[Bbox], output_dir: str, 
-                                    word_class: str = '0',
-                                    white_bg: bool = False) -> None:
+                                    rotate: bool,
+                                    mask_image: bool,
+                                    mask_color: CropMaskColor,
+                                    word_class: str = '0') -> None:
     if not os.path.exists(image_path):
         raise ValueError(f"There is no such an image {image_path}")
     
@@ -140,7 +187,7 @@ def create_lines_dataset_from_image(image_path: str,
     for line_idx in line_to_words:
         line = lines[line_idx]
 
-        line_image = crop_line_from_image(image, line, white_bg=white_bg)
+        line_image = crop_line_from_image(image, line, rotate, mask_image, mask_color)
         line_image_path = os.path.join(output_dir, f"{image_name[:-4]}_{line_idx}.jpg")
 
         try:
@@ -165,7 +212,10 @@ def create_dataset_of_lines(words_dataset_path: str,
                             words_ids: list,
                             lines_dataset_path: str,
                             lines_ids: list,
-                            output_dataset_path: str):
+                            output_dataset_path: str,
+                            rotate: bool,
+                            mask_image: bool,
+                            mask_color: CropMaskColor):
     os.makedirs(output_dataset_path, exist_ok=True)
     word_label_paths: list[str] = []
     line_label_paths: list[str] = []
@@ -194,8 +244,11 @@ def create_dataset_of_lines(words_dataset_path: str,
 
         line_obbs = sh.read_shapes(line_label, sh.to_obb, lines_ids)
 
-        create_lines_dataset_from_image(image_path, line_obbs, word_bboxes, output_dataset_path, white_bg=True)
-        
+        create_lines_dataset_from_image(
+            image_path, line_obbs, word_bboxes, 
+            output_dataset_path, rotate, mask_image, mask_color
+        )
+
 
 def split_dataset(dataset_path: str, output_path: str):
     if not os.path.exists(output_path):
@@ -210,20 +263,31 @@ def split_dataset(dataset_path: str, output_path: str):
     for file in os.listdir(dataset_path):
         if file.endswith(".jpg"):
             if random.random() < 0.8:
-                shutil.copy(os.path.join(dataset_path, file), os.path.join(output_path, "train", file))
-                shutil.copy(os.path.join(dataset_path, file[:-4] + ".txt"), os.path.join(output_path, "train", file[:-4] + ".txt"))
+                shutil.move(os.path.join(dataset_path, file), os.path.join(output_path, "train", file))
+                shutil.move(os.path.join(dataset_path, file[:-4] + ".txt"), os.path.join(output_path, "train", file[:-4] + ".txt"))
             else:
-                shutil.copy(os.path.join(dataset_path, file), os.path.join(output_path, "validation", file))
-                shutil.copy(os.path.join(dataset_path, file[:-4] + ".txt"), os.path.join(output_path, "validation", file[:-4] + ".txt"))
+                shutil.move(os.path.join(dataset_path, file), os.path.join(output_path, "validation", file))
+                shutil.move(os.path.join(dataset_path, file[:-4] + ".txt"), os.path.join(output_path, "validation", file[:-4] + ".txt"))
 
 
 if __name__ == "__main__":
-    words_dataset = r"E:\Labs\year_3\Latina\LatinaProject\datasets\seven-classes"
-    lines_dataset = r"E:\Labs\year_3\Latina\LatinaProject\datasets\lines-obb-clean"
+    # TODO: Make words coordinates move due to line rotation
+    
+    configurations = [
+        {"dataset_name": "word-in-lines-rotated-mean", "mask_image": True, "rotate": True, "color": CropMaskColor.MEAN},
+        {"dataset_name": "word-in-lines-rotated-black", "mask_image": True, "rotate": True, "color": CropMaskColor.BLACK}
+    ]
+
+    words_dataset = r"E:\Dyploma\Latina\LatinaProject\datasets\seven-classes"
+    lines_dataset = r"E:\Dyploma\Latina\LatinaProject\datasets\lines-obb-clean"
     words_ids = ["2", "3", "5", "6"]
     lines_ids = ["0"]
-    output_dataset = r"E:\Labs\year_3\Latina\LatinaProject\datasets\words-in-lines"
+    f_output_dataset = "E:\\Dyploma\\Latina\\LatinaProject\\datasets\\{dataset_name}"
 
-    create_dataset_of_lines(words_dataset, words_ids, lines_dataset, lines_ids, output_dataset)
-    split_dataset(output_dataset, output_dataset)
-    
+    for config in configurations:
+        output_dataset = f_output_dataset.format(dataset_name=config["dataset_name"])
+        print(f"Creating {output_dataset}")
+
+        create_dataset_of_lines(words_dataset, words_ids, lines_dataset, lines_ids, output_dataset, 
+                                config["rotate"], config["mask_image"], config["color"])
+        split_dataset(output_dataset, output_dataset)
