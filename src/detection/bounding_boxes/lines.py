@@ -1,4 +1,4 @@
-from shapes import Obb
+from .shapes import Obb
 import numpy as np
 
 

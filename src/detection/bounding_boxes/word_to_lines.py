@@ -8,9 +8,9 @@ import shutil
 import cv2
 import os
 
-from shapes import Bbox, Obb
-from lines import line_angle
-import shapes as sh
+from .shapes import Bbox, Obb
+from .lines import line_angle
+from . import shapes as sh
 
 
 class CropMaskColor(Enum):
@@ -102,6 +102,54 @@ def crop_line_from_image(
     return cropped
 
 
+def bbox_centers_to_numpy(words: list[Bbox]) -> np.ndarray:
+    centers = []
+    for word in words:
+        centers.append([word.cx, word.cy])
+    
+    return np.array(centers)
+
+
+def rotate_words_in_line(
+        rotation_angle: float,
+        img_shape: tuple[int, int],
+        words: list[Bbox]
+    ) -> list[Bbox]:
+    """
+    Rotate words' centers around to compensate line rotation. 
+    Args:
+        rotation_angle (float): Line angle in degrees.
+        img_shape (tuple[int, int]): Shape of cropped line image. Used to define center and make rotation accurate.
+        words (list[Bbox]): List of bboxes containing words' coordinates belonging to rotated line.
+    Returns:
+        list[Bbox]: List of bboxes with coordinates of rotated words.
+    """
+    img_shape = np.array(img_shape)
+    rotation_angle = np.radians(rotation_angle)
+    rotation_matrix = np.array([
+        [np.cos(rotation_angle), -np.sin(rotation_angle)],
+        [np.sin(rotation_angle), np.cos(rotation_angle)]
+    ])
+
+    rotation_center = img_shape / 2
+
+    centers = bbox_centers_to_numpy(words) * img_shape
+    centers -= rotation_center
+    rotated_centers = centers @ rotation_matrix.T # (A @ B).T = B.T @ A.T
+    rotated_centers += rotation_center
+    rotated_centers /= img_shape
+
+    rotated_words = []
+    for i in range(rotated_centers.shape[0]):
+        center = rotated_centers[i]
+        bbox = words[i]
+        rotated_bbox = sh.Bbox(center[0], center[1], bbox.w, bbox.h)
+        cropped_bbox = crop_bbox(rotated_bbox)
+        rotated_words.append(cropped_bbox)
+    
+    return rotated_words
+
+
 def crop_bbox(bbox: Bbox) -> Bbox:
     x1 = bbox.cx - bbox.w / 2
     y1 = bbox.cy - bbox.h / 2
@@ -119,6 +167,7 @@ def crop_bbox(bbox: Bbox) -> Bbox:
     cy = (rec[1] + rec[3]) / 2
     w = rec[2] - rec[0]
     h = rec[3] - rec[1]
+
     return Bbox(cx, cy, w, h)
 
 
@@ -149,7 +198,6 @@ def bbox_to_line_space(bbox: Bbox, line: list, crop=True) -> Bbox:
     return Bbox(*line_bbox_center, *line_bbox_size)
 
 
-
 def words_to_line_space(words: list[Bbox], line: Obb) -> list[Bbox]:
     line_words = []
     line_rec = obb_to_rec(line)
@@ -168,7 +216,9 @@ def write_bboxes_to_file(bboxes: list[Bbox], filename: str, class_name: str) -> 
 
 
 def create_lines_dataset_from_image(image_path: str,
-                                    lines: list[Obb], words: list[Bbox], output_dir: str, 
+                                    lines: list[Obb],
+                                    words: list[Bbox],
+                                    output_dir: str,
                                     rotate: bool,
                                     mask_image: bool,
                                     mask_color: CropMaskColor,
@@ -197,9 +247,16 @@ def create_lines_dataset_from_image(image_path: str,
         
         line_words = [words[idx] for idx in line_to_words[line_idx]]
         line_words = words_to_line_space(line_words, line)
+        if rotate and len(line_words):
+            rotation_angle = -line_angle(line)
+            line_words = rotate_words_in_line(
+                rotation_angle, 
+                (line_image.shape[1], line_image.shape[0]),
+                line_words
+            )
 
         write_bboxes_to_file(line_words, os.path.join(output_dir, f"{image_name[:-4]}_{line_idx}.txt"), word_class)
-    
+
 
 def find_line_label(word_label_path: str, line_labels: list[str]) -> Optional[str]:
     word_label = os.path.basename(word_label_path)
@@ -291,3 +348,46 @@ if __name__ == "__main__":
         create_dataset_of_lines(words_dataset, words_ids, lines_dataset, lines_ids, output_dataset, 
                                 config["rotate"], config["mask_image"], config["color"])
         split_dataset(output_dataset, output_dataset)
+
+    # from plotter import plot_obbs_on_image, plot_obb_on_image
+
+    # image_path = r"E:\Dyploma\Latina\LatinaProject\datasets\lines-obb-clean\train\AUR_881_X_14-101 (text).jpg"
+    # lines_path = r"E:\Dyploma\Latina\LatinaProject\datasets\lines-obb-clean\train\AUR_881_X_14-101 (text).txt"
+    # words_path = r"E:\Dyploma\Latina\LatinaProject\datasets\seven-classes\train\AUR_881_X_14-101 (text).txt"
+
+    # img = cv2.imread(image_path)
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # lines = sh.read_shapes(lines_path, sh.to_obb, ["0"])
+    # words = sh.read_shapes(words_path, sh.to_bbox, ["2", "3", "5", "6"])
+    # line_idx = 2
+
+    
+    # line_img = crop_line_from_image(img, lines[line_idx], rotate=False)
+
+    # line_words_map = sh.map_words_to_lines(words, lines, img)
+    # line_words = [words[idx] for idx in line_words_map[line_idx]]
+    # line_words = words_to_line_space(line_words, lines[line_idx])
+    # line_words_r = rotate_words_in_line(
+    #     -line_angle(lines[line_idx]),
+    #     (line_img.shape[1], line_img.shape[0]), 
+    #     line_words
+    # )
+    
+    # line_img = plot_obbs_on_image(line_img, list(map(sh.to_obb, line_words)))
+    # line_img_r = crop_line_from_image(img, lines[line_idx])
+    # line_img_wr = plot_obbs_on_image(line_img_r.copy(), list(map(sh.to_obb, line_words_r)))
+    # line_img_w = plot_obbs_on_image(line_img_r.copy(), list(map(sh.to_obb, line_words)))
+
+    # plt.subplot(311)
+    # plt.title("unrotated line")
+    # plt.imshow(line_img)
+
+    # plt.subplot(312)
+    # plt.title("rotated lines and words")
+    # plt.imshow(line_img_wr)
+
+    # plt.subplot(313)
+    # plt.title("rotated line, not words")
+    # plt.imshow(line_img_w)
+
+    # plt.show()

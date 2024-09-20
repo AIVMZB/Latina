@@ -1,0 +1,7 @@
+path: words-in-lines-rotated-mean
+
+train: .\train
+val: .\validation
+
+names:
+  0: word
