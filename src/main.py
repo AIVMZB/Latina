@@ -44,29 +44,3 @@ if __name__ == "__main__":
             )
 
     print(f"The results are saved in {config['prediction_dir']} folder")
-
-# if __name__ == "__main__":
-#     import os
-#     import cv2
-#     import matplotlib.pyplot as plt
-#     from detection.bounding_boxes.plotter import plot_obbs_on_image
-#     import detection.bounding_boxes.shapes as sh
-
-#     directory = r"E:\Dyploma\Latina\LatinaProject\datasets\word-in-lines-rotated-black\train"
-
-#     for file in os.listdir(directory):
-#         if file.endswith(".jpg"):
-#             label_file = file.replace(".jpg", ".txt")
-#             image_path = os.path.join(directory, file)
-#             label_path = os.path.join(directory, label_file)
-
-#             words = sh.read_shapes(label_path, sh.to_bbox, ["0"])
-
-#             image = cv2.imread(image_path)
-#             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-#             words = list(map(sh.to_obb, words))
-#             image = plot_obbs_on_image(image, words)
-
-#             plt.imshow(image)
-#             plt.show()

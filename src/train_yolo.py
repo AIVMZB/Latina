@@ -1,7 +1,6 @@
 from argparse import ArgumentParser
 
 from detection.model_wrapper import YoloWrapper
-from detection.preprocessing.preprocessor import ImagePreprocessor, EdgeDetection
 
 
 def parse_args():

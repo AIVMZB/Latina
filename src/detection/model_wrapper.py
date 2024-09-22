@@ -92,6 +92,7 @@ class LineWordPipeline:
                  word_conf: float,
                  line_int_resolver: IntersectionResolver | None,
                  word_int_resolver: IntersectionResolver | None,
+                 rotate_lines: bool = False,
                  device: str = "cuda:0"):
         """
         Creates instance of LineWordPipeline
@@ -109,6 +110,7 @@ class LineWordPipeline:
 
         self._line_conf = line_conf
         self._word_conf = word_conf
+        self._rotate_lines = rotate_lines
 
     def predict_on_image(self, image_path: str, output_path: str):
         """
@@ -132,7 +134,7 @@ class LineWordPipeline:
         cv2.imwrite(os.path.join(output_path, "line_predictions.jpg"), raw_lines_image)
         
         if self._line_int_resolver is not None:
-            resolved_lines = resolve_intersected_objects(lines, line_confs, 0.2, self._line_int_resolver)
+            resolved_lines = resolve_intersected_objects(lines, line_confs, 0.15, self._line_int_resolver)
             resolved_lines = extend_lines_to_corners(resolved_lines)
         
             resolved_lines_image = plot_obbs_on_image(image.copy(), resolved_lines, (255, 0, 0))
@@ -140,10 +142,9 @@ class LineWordPipeline:
         else:
             resolved_lines = raw_lines_image
 
-
         for i in range(len(resolved_lines)):
             line = resolved_lines[i]
-            line_image = crop_line_from_image(image, line)
+            line_image = crop_line_from_image(image, line, rotate=self._rotate_lines)
 
             if line_image.size == 0:
                 print("[WARNING] Failed to crop a line. Its size is zero!")
@@ -185,5 +186,6 @@ def build_line_word_pipeline(config: dict[str, any]):
         config["line_detection"]["min_conf"],
         config["word_detection"]["min_conf"],
         line_int_resolver,
-        word_int_resolver
+        word_int_resolver,
+        config["line_detection"]["rotate_lines"],
     )
