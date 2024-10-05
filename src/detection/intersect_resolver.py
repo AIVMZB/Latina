@@ -128,8 +128,9 @@ def resolve_intersected_objects(
         i = pair[0]
         j = pair[1]
         
-        chosen_box = resolver(boxes[i], confs[i], boxes[j], confs[j])
-        boxes[i] = chosen_box
-        boxes[j] = None
+        if boxes[i] is not None and boxes[j] is not None:
+            chosen_box = resolver(boxes[i], confs[i], boxes[j], confs[j])
+            boxes[i] = chosen_box
+            boxes[j] = None
     
     return list(filter(lambda x: x != None, boxes))

@@ -6,14 +6,17 @@ from detection.intersect_resolver import IntersectionResolver, build_resolver_by
 
 from ultralytics import YOLO
 from typing import Union
+import numpy as np
 import cv2
 import torch
 import os
 
 
 class YoloWrapper:
-    TRAIN_KWARGS = dict(batch=2, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, 
-                        translate=0.1, scale=0.1, fliplr=0.0, mosaic=0.0, erasing=0.0, crop_fraction=0.1)
+    # TRAIN_KWARGS = dict(batch=2, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, 
+    #                     translate=0.1, scale=0.1, fliplr=0.0, mosaic=0.0, erasing=0.0, crop_fraction=0.1) # For words
+    TRAIN_KWARGS = dict(batch=2, cls=0.2, box=10, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, degrees=3,
+                        translate=0.1, scale=0.1, fliplr=0.0, mosaic=0.0, erasing=0.0, crop_fraction=0.1) # For lines
 
     def __init__(
             self, 
@@ -53,7 +56,12 @@ class YoloWrapper:
         """
         self._model.train(data=data_file, epochs=epochs, imgsz=img_size, device=self._device, **YoloWrapper.TRAIN_KWARGS)
 
-    def inference_image(self, image_path: str, prediction_dir: str, min_conf: float = 0.5, show_plot: bool = True):
+    def inference_image(self, 
+                        image_path: str, 
+                        prediction_dir: str, 
+                        min_conf: float = 0.5, 
+                        show_plot: bool = True, 
+                        save_boxex_file: str | None = None):
         """
         Inferences model work in image
         Args:
@@ -61,6 +69,7 @@ class YoloWrapper:
             prediction_dir (str): Path to directory where to save results
             min_conf (float): Minimal confidence of prediction. Defaults to 0.5
             show_plot (bool): If set to True, shows plot of model's prediction
+            save_boxes_file (str | None): Set path to txt file to save predicted bounding boxes. Defauls to None
         """
         image = cv2.imread(image_path)
         image = self._preprocessor.process(image)
@@ -72,6 +81,12 @@ class YoloWrapper:
         
         result.plot(labels=True, probs=False, show=show_plot, save=True, line_width=2,
                     filename=os.path.join(prediction_dir, os.path.basename(image_path)))
+        
+        if save_boxex_file is not None:
+            boxes = result.obb.xyxyxyxy.cpu().numpy().reshape(-1, 8)
+            print(boxes.shape)
+            np.savetxt(save_boxex_file, boxes, delimiter=",")
+
 
     @property
     def model(self) -> YOLO:

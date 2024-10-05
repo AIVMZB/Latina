@@ -30,8 +30,3 @@ if __name__ == "__main__":
     )
 
     print(f"The results are saved in {config['prediction_dir']} folder")
-
-
-# TODO:
-# 2) Move plot function to separate module
-# 3) Rename shapes_util to shapes
