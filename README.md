@@ -41,3 +41,7 @@ The project is created for reading medieval latin documents using deep learning 
 and unpack it to project root folder
 
 [Link](https://drive.google.com/drive/folders/1rDiNWzTFDnUGerJdcM-tIONm1AEr_n0h?usp=sharing) for raw data.
+
+[Link](https://drive.google.com/drive/folders/1Xpi9s0vb1pOYyyMBkaao46YcdjZVHw7s?usp=drive_link) for dataset splited by documents.
+
+[Link](https://drive.google.com/drive/folders/1adG6ER5cRvbnMYlqTchT-Awiddgx0Zly?usp=drive_link) for dataset sorted by classes.
