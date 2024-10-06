@@ -1,0 +1,7 @@
+path: word-in-lines-rotated-black
+
+train: .\train
+val: .\validation
+
+names:
+  0: word
