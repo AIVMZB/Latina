@@ -13,7 +13,7 @@ import os
 
 
 class YoloWrapper:
-    TRAIN_KWARGS = dict(batch=2, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, 
+    TRAIN_KWARGS = dict(batch=2, box=10, cls=0.2, dfl=0.7, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, 
                         translate=0.1, scale=0.1, fliplr=0.0, mosaic=0.0, erasing=0.0, crop_fraction=0.1)
 
     def __init__(
