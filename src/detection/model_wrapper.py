@@ -13,10 +13,9 @@ import os
 
 
 class YoloWrapper:
-    # TRAIN_KWARGS = dict(batch=2, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, 
-    #                     translate=0.1, scale=0.1, fliplr=0.0, mosaic=0.0, erasing=0.0, crop_fraction=0.1) # For words
-    TRAIN_KWARGS = dict(batch=2, cls=0.2, box=10, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, degrees=3,
-                        translate=0.1, scale=0.1, fliplr=0.0, mosaic=0.0, erasing=0.0, crop_fraction=0.1) # For lines
+    # TODO: Handle this:
+    TRAIN_KWARGS = dict(batch=2, workers=1, hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, 
+                        translate=0.1, scale=0.1, fliplr=0.0, mosaic=0.0, erasing=0.0, crop_fraction=0.1)
 
     def __init__(
             self, 
@@ -46,15 +45,17 @@ class YoloWrapper:
         else:
             self._preprocessor = ImagePreprocessor()
 
-    def train(self, data_file: str, epochs: int, img_size: int) -> None:
+    def train(self, data_file: str, epochs: int, img_size: int, angle_aug: float = 0) -> None:
         """
         Trains model using given data
         Args:
             data_file (str): path to yaml file of dataset
             epochs (int): number of epochs to train
             img_size (int): image size
+            angle_aug (float): Value for applying rotation augmentation by given angle. 
+            Useful to train line detection model with angle_aug=3. Defaults to 0.
         """
-        self._model.train(data=data_file, epochs=epochs, imgsz=img_size, device=self._device, **YoloWrapper.TRAIN_KWARGS)
+        self._model.train(data=data_file, epochs=epochs, imgsz=img_size, device=self._device, degrees=angle_aug, **YoloWrapper.TRAIN_KWARGS)
 
     def inference_image(self, 
                         image_path: str, 
