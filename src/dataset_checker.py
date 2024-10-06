@@ -5,11 +5,11 @@ from detection.dataset_utils.samples_creator import process_lines_and_terms, ass
 
 
 if __name__ == "__main__":
-    lines = read_shapes(r"D:\GitHub\Latina\datasets\datasets\lines-obb-clean\train\AUR_891_III_9-101 (text).txt",
+    lines = read_shapes(r"E:\Dyploma\Latina\LatinaProject\datasets\lines-obb-clean\train\AUR_891_III_9-101 (text).txt",
                         transform_func=to_obb, class_nums="0")
-    words = read_shapes(r"D:\GitHub\Latina\datasets\datasets\seven-classes\train\AUR_891_III_9-101 (text).txt",
+    words = read_shapes(r"E:\Dyploma\Latina\LatinaProject\datasets\seven-classes\train\AUR_891_III_9-101 (text).txt",
                             transform_func=to_bbox, class_nums=["1", "2", "3", "6"])
-    image_path = r"D:\GitHub\Latina\datasets\datasets\seven-classes\train\AUR_891_III_9-101 (text).jpg"
+    image_path = r"E:\Dyploma\Latina\LatinaProject\datasets\seven-classes\train\AUR_891_III_9-101 (text).jpg"
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
