@@ -132,3 +132,19 @@ def model_results_to_obbs(results: np.ndarray) -> list[Obb]:
         )
     
     return obbs
+
+
+def line_angle(line: Obb) -> float:
+    top_left = find_top_left(line)
+    top_right = find_top_right(line)
+    bottom_left = find_bottom_left(line)
+    bottom_right = find_bottom_right(line)
+    
+    top_direction = np.array([top_right[0] - top_left[0], top_right[1] - top_left[1]])
+    bottom_direction = np.array([bottom_right[0] - bottom_left[0], bottom_right[1] - bottom_left[1]])
+    avg_direction = (top_direction + bottom_direction) / 2
+    avg_direction = avg_direction / np.sqrt((avg_direction @ avg_direction.T))
+
+    radians = np.arctan(avg_direction[1] / avg_direction[0])
+    
+    return np.degrees(radians)

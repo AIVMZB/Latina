@@ -89,7 +89,9 @@ def build_resolver_by_name(resolver_name: str | None) -> IntersectionResolver | 
     if resolver_name == "UnionResolver":
         from detection.intersect_resolver import UnionResolver
         return UnionResolver()
-    
+    else:
+        raise ValueError("Choose one the available resolvers: ByConfResolver, MeanResolver, UnionResolver")
+
 
 class MeanResolver(IntersectionResolver):    
     def __call__(self, 
@@ -128,7 +130,7 @@ def resolve_intersected_objects(
         i = pair[0]
         j = pair[1]
         
-        if boxes[i] is not None and boxes[j] is not None:
+        if boxes[i] is not None and boxes[j] is not None: ## TODO: Fix it
             chosen_box = resolver(boxes[i], confs[i], boxes[j], confs[j])
             boxes[i] = chosen_box
             boxes[j] = None
