@@ -52,7 +52,7 @@ class YoloWrapper:
             epochs (int): number of epochs to train
             img_size (int): image size
             angle_aug (float): Value for applying rotation augmentation by given angle. 
-            Useful to train line detection model with angle_aug=3. Defaults to 0.
+                Useful to train line detection model with angle_aug=3. Defaults to 0.
         """
         self._model.train(data=data_file, epochs=epochs, imgsz=img_size, device=self._device, degrees=angle_aug, **YoloWrapper.TRAIN_KWARGS)
 
