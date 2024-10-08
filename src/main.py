@@ -1,46 +1,38 @@
-import os
-import yaml
-import argparse
-
-from detection.model_wrapper import build_line_word_pipeline
+from argparse import ArgumentParser, ArgumentError
+from detection import dataset_checker, inference, train
 
 
-WORD_DETECTION_IMG_SIZE = 512
-LINE_DETECTION_IMG_SIZE = 768
+def build_parser() -> ArgumentParser:
+    parser = ArgumentParser(
+        parents=[
+            dataset_checker.build_parser(),
+            inference.build_parser(),
+            train.build_parser()
+            ],
+        add_help=True
+    )
+
+    parser.add_argument(
+        "-m", "--module", type=str, 
+        help="Module name to run"    
+    )
+
+    return parser
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--image", type=str, required=None, help="Path to image")
-    parser.add_argument("--img-dir", type=str, default=None, help="Path to directory with images")
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
 
-    return parser.parse_args()
+    if args.module == "inference":
+        inference.run(args)
+    elif args.module == "dataset_checker":
+        dataset_checker.run(args)
+    elif args.modulde == "train":
+        train.run(args)
+    else:
+        raise ArgumentError(f"No such available module {args.module}")
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    image: str = args.image
-    img_dir: str = args.img_dir
-
-    with open("../config/inference.yaml", 'r') as f:
-        config = yaml.safe_load(f)
-
-    pipeline = build_line_word_pipeline(config)
-    
-    if not img_dir and image:
-        pipeline.predict_on_image(
-            image,
-            config["prediction_dir"]
-        )
-    elif img_dir:
-        for filename in os.listdir(img_dir):
-            if not filename.endswith(".jpg"):
-                continue
-            print(f" Processing {filename} ".center(70, "-"))
-            pred_dir = os.path.join(config["prediction_dir"], filename.split(".")[0])
-            pipeline.predict_on_image(
-                os.path.join(img_dir, filename),
-                pred_dir
-            )
-
-    print(f"The results are saved in {config['prediction_dir']} folder")
+    main()

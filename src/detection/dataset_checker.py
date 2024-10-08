@@ -2,9 +2,14 @@ import cv2
 import os
 from detection.bounding_boxes.shapes import read_shapes, to_bbox, to_obb
 from detection.dataset_utils.samples_creator import process_lines_and_terms, assign_terms_to_words
+from argparse import ArgumentParser, Namespace
 
 
-if __name__ == "__main__":
+def build_parser():
+    return ArgumentParser(add_help=False)
+
+
+def run(args: Namespace):
     lines = read_shapes(r"E:\Dyploma\Latina\LatinaProject\datasets\lines-obb-clean\train\AUR_891_III_9-101 (text).txt",
                         transform_func=to_obb, class_nums="0")
     words = read_shapes(r"E:\Dyploma\Latina\LatinaProject\datasets\seven-classes\train\AUR_891_III_9-101 (text).txt",

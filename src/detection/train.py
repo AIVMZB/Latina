@@ -1,9 +1,9 @@
 from detection.model_wrapper import YoloWrapper
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 
 
-def parse_args():
-    parser = ArgumentParser()
+def build_parser():
+    parser = ArgumentParser(add_help=False)
     parser.add_argument(
         "--obb", action="store_true",
         help="Flag to use OBB (Oriented Bounding Box) model."
@@ -17,7 +17,7 @@ def parse_args():
         help="Image size. Defaults to 608"
     )
     parser.add_argument(
-        "--data_file", required=True, type=str,
+        "--data_file", type=str,
         help="Path to data yaml file to train a model."
     )
     parser.add_argument(
@@ -25,11 +25,10 @@ def parse_args():
         help="Angle augmentation value. Defaults to 0"
     )
 
-    return parser.parse_args()
+    return parser
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def run(args: Namespace):
     if args.obb:
         model = YoloWrapper("yolov8m-obb.pt", "cuda:0")
     else:
